@@ -1,3 +1,6 @@
+
+
+
 /*
 **
 **                     -+- sonoro -+-
@@ -31,7 +34,7 @@
 
 #include      "rect.cc"
 #include     "mouse.cc"
-#include    "widget.cc"
+#include         "e.h"
 
 char *
 copy_string_ex(
@@ -84,12 +87,10 @@ int main(int argc, char **argv)
 {
   rxinit(L"Terra");
 
-  ccglobal textbox_widget_t editor;
+  ccglobal ewdg_t editor;
   ZeroMemory(&editor,sizeof(editor));
 
   fload(&editor,"light.hlsl");
-
-  movcur(&editor,0,0);
 
   editor.focused = TRUE;
 
@@ -118,9 +119,12 @@ int main(int argc, char **argv)
     rect_t r = get_window_client_rect();
 
     rect_t s = rect_cut(&r,RECT_kTOP,16);
-    draw_text(s,ccformat("%i,%i",editor.cursor.xchar,editor.cursor.yline),16,RX_COLOR_WHITE);
 
-    if(textbox_widget(r,&editor))
+    draw_text(s,ccformat("%i,%i",
+      editor.cursor.xchar,
+      editor.cursor.yline),16,RX_COLOR_WHITE);
+
+    if(ewdg(r,&editor))
     {
     }
 
