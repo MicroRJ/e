@@ -30,13 +30,11 @@ typedef struct ecur_t
   int      yline;
 } ecur_t;
 
-
 typedef struct erow_t
 {
   int offset;
   int length;
 } erow_t;
-
 
 typedef struct ewdg_t
 {
@@ -45,15 +43,42 @@ typedef struct ewdg_t
 
   int        focused;
 
+  /* this should be per buffer */
   ecur_t      cursor;
   int         lyview;
-
   erow_t     *lcache;
-
   char       *buffer;
   int         length;
-
+  char const *buftag;
+  int         difmod;/* this should be more intricate */
 } ewdg_t;
+
+
+/* utilities */
+char *
+copy_string_ex(
+  const char *the_string, unsigned int the_length)
+{
+  if((the_string == 0) ||
+     (the_length == 0)) return ccnull;
+
+  char *the_result = ccmalloc(the_length+1);
+  memcpy(the_result,the_string,the_length+1);
+  the_result[the_length] = 0;
+
+  return the_result;
+}
+
+char *
+copy_string(
+  const char *the_string)
+{
+  if((the_string == 0)) return ccnull;
+
+  return copy_string_ex(the_string,strlen(the_string));
+}
+
+const char *fdlg();
 
 /* implementation */
 void
@@ -102,13 +127,6 @@ retry:
   }
 }
 
-int
-buflen(
-  ewdg_t *widget)
-{
-  return widget->length;
-}
-
 /* get line at index */
 erow_t
 egetrow(
@@ -139,6 +157,18 @@ esetcur(ewdg_t *wdg, ecur_t cur)
   wdg->cursor = cur;
 }
 
+void
+esetcurx(ewdg_t *wdg, int x)
+{
+  wdg->cursor.xchar = x;
+}
+
+void
+esetcury(ewdg_t *wdg, int y)
+{
+  wdg->cursor.yline = y;
+}
+
 /* get the cursor at index, (index not implemented) */
 ecur_t
 egetcur(ewdg_t *wdg)
@@ -167,11 +197,11 @@ ecurloc(ewdg_t *wdg)
   return egetoff(wdg,egetcury(wdg)) + egetcurx(wdg);
 }
 
-rect_t
+rxrect_t
 currec(
   ewdg_t *widget,
   /* this is temporary, the widget should store this? */
-    rect_t rect)
+    rxrect_t rect)
 {
   int xcur = widget->cursor.xchar;
   int ycur = widget->cursor.yline;
@@ -182,8 +212,6 @@ currec(
   xcur  *= rxchrxsz(32);
   return rect_by_size(rect.x0+xcur,rect.y1-ycur-32,16,32);
 }
-
-
 
 void
 emovcurx(
@@ -214,7 +242,6 @@ emovcurx(
   esetcur(wdg,cur);
 }
 
-
 void
 emovcury(
   ewdg_t *wdg, int mov)
@@ -231,7 +258,6 @@ emovcury(
   }
 }
 
-
 void
 eputchar(
   ewdg_t *widget, int chr)
@@ -240,6 +266,7 @@ eputchar(
   widget->length += 1;
 
   int loc = ecurloc(widget);
+
   char *mem = &widget->buffer[loc];
 
   int mov = ccarrlen(widget->buffer) - loc - 1;
@@ -249,6 +276,9 @@ eputchar(
 
   /* remove */
   erecache(widget,widget->length,widget->buffer);
+
+  /* make this legit dude */
+  widget->difmod = TRUE;
 }
 
 void
@@ -258,23 +288,35 @@ edelchar(
   int loc = ecurloc(widget);
 
   char *mem = &widget->buffer[loc];
-  *mem = 0;
 
-  int mov = buflen(widget) - loc - 1;
-  memmove(mem,mem+1,mov);
+  int num = 1;
+
+  if(mem[0] == '\r' &&
+     mem[1] == '\n')
+  {
+    num += 1;
+  }
+
+  int mov = ccarrlen(widget->buffer) - loc - num;
+  memmove(mem,mem+num,mov);
 
   widget->length -= 1;
 
   // /* remove */
   erecache(widget,ccarrlen(widget->buffer),widget->buffer);
+
+  /* make this legit dude */
+  widget->difmod = TRUE;
 }
 
 void
-fload(
+eload(
   ewdg_t *widget, char const *name)
 {
   if(name != 0 && strlen(name) != 0)
   {
+    widget->buftag = copy_string(name);
+
     void *file = ccopenfile(name,"r");
 
     ccu32_t length = 0;
@@ -297,7 +339,7 @@ fload(
 
 
 void
-fsave(
+eunload(
   ewdg_t *widget, char const *name)
 {
   if(name != 0 && strlen(name) != 0)
@@ -312,11 +354,13 @@ fsave(
 }
 
 int
-ewdg(rect_t rect, ewdg_t *widget)
+ewdg(rxrect_t rect, ewdg_t *widget)
 {
+
+
   int in_rect = cursor_in_rect(rect);
 
-  if(is_click_enter(0))
+  if(IS_CLICK_ENTER(0))
   {
     if(in_rect)
     {
@@ -326,8 +370,22 @@ ewdg(rect_t rect, ewdg_t *widget)
 
   if(widget->focused)
   {
+    if(rxisctrl() && rxtstkey('O'))
+    {
+      eload(widget,fdlg());
+    } else
+    if(rxisctrl() && rxtstkey('S'))
+    {
+      eunload(widget,fdlg());
+    } else
+    if(rxtstkey(rx_kHOME))
+    { esetcurx(widget,0);
+    } else
+    if(rxtstkey(rx_kEND))
+    { esetcurx(widget,egetlen(widget,egetcury(widget)));
+    } else
     if(rxtstkey(rx_kKEY_UP))
-    { if(rx.is_ctrl)
+    { if(rxisctrl())
       {
         widget->lyview -= 1;
         widget->lyview = rxclampi(widget->lyview,0,ccarrlen(widget->lcache)-1);
@@ -338,7 +396,7 @@ ewdg(rect_t rect, ewdg_t *widget)
     } else
     if(rxtstkey(rx_kKEY_DOWN))
     {
-      if(rx.is_ctrl)
+      if(rxisctrl())
       {
         widget->lyview += 1;
         widget->lyview = rxclampi(widget->lyview,0,ccarrlen(widget->lcache)-1);
@@ -348,7 +406,7 @@ ewdg(rect_t rect, ewdg_t *widget)
       }
     } else
     if(rxtstkey(rx_kKEY_LEFT))
-    { if(rx.is_ctrl)
+    { if(rxisctrl())
       {
       } else
       {
@@ -357,7 +415,7 @@ ewdg(rect_t rect, ewdg_t *widget)
     } else
     if(rxtstkey(rx_kKEY_RIGHT))
     {
-      if(rx.is_ctrl)
+      if(rxisctrl())
       {
       } else
       {
@@ -374,9 +432,12 @@ ewdg(rect_t rect, ewdg_t *widget)
       }
     } else
     if(rxtstkey(rx_kRETURN))
-    { eputchar(widget, '\r');
+    {
+      /* get proper line ending */
+      eputchar(widget, '\r');
       eputchar(widget, '\n');
-      emovcurx(widget,    1);
+
+      emovcurx(widget,    2);
     } else
     { if(rxchr() != 0)
       { eputchar(widget, rxchr());
@@ -386,8 +447,14 @@ ewdg(rect_t rect, ewdg_t *widget)
 
   }
 
+  rxrect_t statbar = rect_cut(&rect,RECT_kTOP,16);
+  draw_text(statbar,ccformat("%i,%i %s%s",
+    widget->cursor.xchar,
+    widget->cursor.yline,
+    widget->difmod ? "*" : "",widget->buftag),16,RX_COLOR_WHITE);
+
   /* drawing */
-  // set_clip_rect(rect);
+  set_clip_rect(rect);
 
   rxcolor_t color = BACKGROUND_COLOR;
 
@@ -412,3 +479,29 @@ ewdg(rect_t rect, ewdg_t *widget)
   return ccfalse;
 }
 
+# pragma comment(lib,"Comdlg32")
+#include   "commdlg.h"
+
+const char *fdlg()
+{
+  char DirBuff[MAX_PATH];
+  GetCurrentDirectory(sizeof(DirBuff),DirBuff);
+
+  OPENFILENAMEA OpenFileName;
+  ZeroMemory(&OpenFileName,sizeof(OpenFileName));
+  OpenFileName.lStructSize     = sizeof(OpenFileName);
+  OpenFileName.hwndOwner       = NULL;
+  OpenFileName.lpstrFile       = ccstatic_alloc(MAX_PATH,TRUE);
+  OpenFileName.nMaxFile        = MAX_PATH;
+  OpenFileName.lpstrFilter     = "All\0*.*\0Text\0*.TXT\0";
+  OpenFileName.nFilterIndex    = 1;
+  OpenFileName.lpstrFileTitle  = NULL;
+  OpenFileName.nMaxFileTitle   = 0;
+  OpenFileName.lpstrInitialDir = NULL;
+  OpenFileName.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+  GetOpenFileNameA(&OpenFileName);
+
+  SetCurrentDirectory(DirBuff);
+
+  return OpenFileName.lpstrFile;
+}

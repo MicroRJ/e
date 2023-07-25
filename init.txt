@@ -1,0 +1,10 @@
+	*-------------------------*
+	TIMENTE MORTEM, OMNIA TIMEO
+	*-------------------------*
+
+Also, the window does not resize
+
+<ctrl-o>    to open a file
+<ctrl-s>    to save a buffer
+<ctrl-UP>   to scroll up
+<ctrl-DOWN> to scroll down
