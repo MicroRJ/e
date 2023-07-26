@@ -1,1 +1,1 @@
-![image of text editor](media/fullscreen.png)
+![image of text editor](media/fullscreen.PNG)
