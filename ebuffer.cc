@@ -1,3 +1,23 @@
+/*
+**
+**                      -+- e -+-
+**
+**                      An Editor?
+**
+**  *--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+**  Copyright(C) Dayan Rodriguez, 2022, All Rights Reserved
+**  *--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+**
+**
+**            [ TIMENTE MORTEM, OMNIA TIMEO ]
+**
+**
+**                 github.com/MicroRJ/e
+**
+**
+**                 USE AT YOUR OWN RISK
+**
+*/
 
 /* todo: invest some skill points in gap buffer research */
 typedef struct ebuffer_t
