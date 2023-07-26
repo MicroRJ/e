@@ -1,0 +1,43 @@
+
+  *-------------------------*
+  TIMENTE MORTEM, OMNIA TIMEO
+  *-------------------------*
+
+Welcome to 'e' the totally unfinished and barebones
+text editor. (Use 'e' at your own risk)
+
+BINDINGS:
+<ctrl-UP>   to scroll up
+<ctrl-DOWN> to scroll down
+<ctrl-o>    to open a file (file-picker)
+<ctrl-s>    to save a buffer (file-picker)
+<ctrl-p>    for the command processor (limited commands)
+
+
+TODO:
+cmd re-routing
+* better and faster buffer (gap buffer)
+* better formatting that takes into account existing whitespace 
+	(avoid extra indentation)
+* line wrapping
+* auto-save
+* multicursor support
+* scroll bar
+* support for scrolling with mouse wheel
+* autocomplete would also be cool
+* grammar correction would be really cool
+* better and faster text highlighting
+* overall better rendering backend
+* better text rendering (better alignment) and also faster text rendering
+(currently not efficient at all)
+fullscreen/window_resize support
+improve cpu usage
+better text navigation
+support for external config files
+introduce workspaces (project config)
+multibuffer support
+buffer window events, otherwise we risk missing them
+render the indentation to know the difference between whitespace and it
+support for other fonts
+better indentation mechanic that takes into account white space added
+convert indentation to white space
