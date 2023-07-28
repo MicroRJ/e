@@ -1,4 +1,4 @@
-
+
   *-------------------------*
   TIMENTE MORTEM, OMNIA TIMEO
   *-------------------------*
@@ -7,21 +7,28 @@ Welcome to 'e' the totally unfinished and barebones
 text editor. (Use 'e' at your own risk)
 
 BINDINGS:
-<ctrl-UP>   to scroll up
-<ctrl-DOWN> to scroll down
-<ctrl-o>    to open a file (file-picker)
-<ctrl-s>    to save a buffer (file-picker)
-<ctrl-p>    for the command processor (limited commands)
-
+<ctrl-UP   >   to scroll up
+<ctrl-DOWN > to scroll down
+<ctrl-o    >    to open a file (file-picker)
+<ctrl-s    >    to save a buffer (file-picker)
+<ctrl-p    >    for the command processor (limited commands)
+<ctrl-F5   >   to rebuild
+<ctrl-F1   >   to save (override)
+<ctrl-SHIFT>
+<UP        >   move up
+<DOWN      >   move down
+<LEFT      >   move left
+<RIGHT     >   move right
 
 TODO:
 cmd re-routing
-* better and faster buffer (gap buffer)
-* better formatting that takes into account existing whitespace 
-	(avoid extra indentation)
+* better and faster buffer
+* better formatting that takes into account existing whitespace (avoid extra indentation)
 * line wrapping
+* x scrolling
+* better shortcuts, (far manager style)
 * auto-save
-* multicursor support
+* multicursor support [%70]
 * scroll bar
 * support for scrolling with mouse wheel
 * autocomplete would also be cool

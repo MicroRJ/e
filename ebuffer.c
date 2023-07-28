@@ -40,41 +40,41 @@ void ebuffer_delete(ebuffer_t *,cci64_t offset, cci64_t length);
 /* implementation */
 void
 ebuffer_init(
-	ebuffer_t *buffer, char const *tag, cci64_t length)
+  ebuffer_t *buffer, char const *tag, cci64_t length)
 {
-	ZeroMemory(buffer,sizeof(*buffer));
+  ZeroMemory(buffer,sizeof(*buffer));
 
-	buffer->tag = copy_string(tag);
+  buffer->tag = estring_copy(tag);
 
-	if(length)
-	{
-		ebuffer_rescom(buffer,length,length);
-	}
+  if(length)
+  {
+    ebuffer_rescom(buffer,length,length);
+  }
 }
 
 void
 ebuffer_uninit(
-	ebuffer_t *buffer)
+  ebuffer_t *buffer)
 {
-	ccfree(buffer->memory);
-	buffer->length = 0;
-	buffer->extent = 0;
+  ccfree(buffer->memory);
+  buffer->length = 0;
+  buffer->extent = 0;
 
-	ccfree(buffer->tag);
-	buffer->tag = 0;
+  ccfree(buffer->tag);
+  buffer->tag = 0;
 
-	buffer->dif = 0;
+  buffer->dif = 0;
 }
 
 char *
 ebuffer_rescom(
-	ebuffer_t *buffer, cci64_t reserve, cci64_t commit)
+  ebuffer_t *buffer, cci64_t reserve, cci64_t commit)
 {
   ccassert(commit <= reserve + buffer->extent - buffer->length);
 
   if(buffer->extent < buffer->length+reserve)
   {
-  	/* this might need fixing */
+    /* this might need fixing */
     buffer->extent <<= 1;
 
     if(buffer->extent < buffer->length + reserve)
@@ -92,34 +92,34 @@ ebuffer_rescom(
 
 char *
 ebuffer_insert(
-	ebuffer_t *buffer, cci64_t offset, cci64_t length)
+  ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
   ebuffer_rescom(buffer,length,length);
 
   if(offset != buffer->length)
   {
-	  memmove(
-	  	buffer->memory+offset+length,
-	  	buffer->memory+offset,
-			buffer->length-offset-length);
+    memmove(
+      buffer->memory+offset+length,
+      buffer->memory+offset,
+      buffer->length-offset-length);
   }
 
-	return buffer->memory+offset;
+  return buffer->memory+offset;
 }
 
 void
 ebuffer_delete(
-	ebuffer_t *buffer, cci64_t offset, cci64_t length)
+  ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
   if(offset != buffer->length)
   {
-	  memmove(
-	  	buffer->memory+offset,
-	  	buffer->memory+offset+length,
-			buffer->length-offset-length);
+    memmove(
+      buffer->memory+offset,
+      buffer->memory+offset+length,
+      buffer->length-offset-length);
   }
 
-  /* what else to do here */
+  /* todo: */
   buffer->length -= length;
 }
 

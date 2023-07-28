@@ -57,3 +57,30 @@ HANDLE RunCommandStringEx(const char *commandLine, const char *workingDirectory)
   }
   return handle;
 }
+
+# pragma comment(lib,"Comdlg32")
+#include   "commdlg.h"
+
+const char *fdlg()
+{
+  char DirBuff[MAX_PATH];
+  GetCurrentDirectory(sizeof(DirBuff),DirBuff);
+
+  OPENFILENAMEA OpenFileName;
+  ZeroMemory(&OpenFileName,sizeof(OpenFileName));
+  OpenFileName.lStructSize     = sizeof(OpenFileName);
+  OpenFileName.hwndOwner       = NULL;
+  OpenFileName.lpstrFile       = ccstatic_alloc(MAX_PATH,TRUE);
+  OpenFileName.nMaxFile        = MAX_PATH;
+  OpenFileName.lpstrFilter     = "All\0*.*\0Text\0*.TXT\0";
+  OpenFileName.nFilterIndex    = 1;
+  OpenFileName.lpstrFileTitle  = NULL;
+  OpenFileName.nMaxFileTitle   = 0;
+  OpenFileName.lpstrInitialDir = NULL;
+  OpenFileName.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+  GetOpenFileNameA(&OpenFileName);
+
+  SetCurrentDirectory(DirBuff);
+
+  return OpenFileName.lpstrFile;
+}

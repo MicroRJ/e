@@ -12,6 +12,8 @@
 
 @CALL cl %myCompilerOptions% %myInclude% %myName%.cc /Fe%myName%.exe /link %myLinkerOptions%
 
-@CALL %myName%.exe
+@IF "%2"=="TRUE" (
+	@CALL %myName%.exe
+)
 
 @ENDLOCAL
