@@ -19,6 +19,7 @@
 **
 */
 
+/* todo: cursors need to be sorted and merged if occupy the same slot */
 int
 eaddcur(
   eeditor_t *editor)
@@ -268,6 +269,7 @@ void
 enewline(
   eeditor_t *editor, int index)
 {
+
   int num = 1;
 
   if(ecurchr(editor,index,-1) == '{')
@@ -282,40 +284,63 @@ enewline(
     ptr[num*2+1] = '\n';
   }
 
+  // eaddrow(editor,egetcury(editor,index),num);
+
   /* remove */
   erecache(editor);
+
   emovcury(editor,index,1);
   esetcurx(editor,index,0);
 }
 
-void
+int
 eputchar(
   eeditor_t *editor, int index, int chr)
 {
-  ccassert(chr != '\r' && chr != '\n');
+  ccassert(
+    chr != '\r' &&
+    chr != '\n' );
 
+  int mov = 1;
   int end = 0;
+
+  /* todo: remove these conversions from here? */
+  if(chr >= 0x80)
+  {
+    chr = '?';
+    end =   0;
+    mov =   1;
+  } else
+  if(chr == '\t')
+  {
+    chr = ' ';
+    end = ' ';
+    mov =   2;
+  } else
   switch(chr)
   {
-  case '{': end = '}'; break;
-  case '[': end = ']'; break;
-  case '(': end = ')'; break;
-  case '}':
-  case ']':
-  case ')':
-    if(ecurchr(editor,index,0) == chr)
-      return;
+    case '{': end = '}'; break;
+    case '[': end = ']'; break;
+    case '(': end = ')'; break;
+    case '}':
+    case ']':
+    case ')':
+      if(ecurchr(editor,index,0) == chr)
+        return mov;
   }
 
-  char *mem = ebuffer_insert(&editor->buffer,ecurloc(editor,index),end!=0?2:1);
-  mem[0] = chr;
+  char *ptr =
+    ebuffer_insert(&editor->buffer,
+      ecurloc(editor,index),end!=0?2:1);
+
+  ptr[0] = chr;
 
   if(end != 0)
-  {
-    mem[1] = end;
-  }
+    ptr[1] = end;
 
   erecache(editor);
+
+  return mov;
 }
 
 /* delete the character or characters at the cursor's position */
@@ -368,6 +393,7 @@ void
 eeditor_unload(
   eeditor_t *editor, char const *name)
 {
+  /* todo: this should be safer */
   if(name != 0 && strlen(name) != 0)
   {
     void *file = ccopenfile(name,"w");
@@ -384,7 +410,12 @@ void
 eeditor_msg(
   eeditor_t *editor)
 {
-
+  if(rxtstkey(rx_kMVWHEEL))
+  {
+    /* scroll up */
+    editor->lyview += rxisshft() ? 16 : - rx.yscroll;
+    editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
+  } else
   if(rxtstkey(rx_kHOME))
   {
     /* move to the start of the line */
@@ -397,6 +428,23 @@ eeditor_msg(
     /* move to the end of the line */
     for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
       esetcurx(editor,i,egetlen(editor,egetcury(editor,i)));
+
+  } else
+  if(rxisctrl() && rxtstkey('X'))
+  {
+    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    {
+      erow_t row = egetrow(editor,egetcury(editor,i));
+
+      int num = 1;
+
+      char *ptr = egetptr(editor,row.offset+row.length);
+      if((ptr[0]=='\r') &&
+         (ptr[1]=='\n')) num += 1;
+
+      ebuffer_delete(&editor->buffer,row.offset,row.length+num);
+      erecache(editor);
+    }
 
   } else
   if(rxtstkey(rx_kKEY_UP))
@@ -414,7 +462,7 @@ eeditor_msg(
       editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
     } else
     {
-      /* move to the live above */
+      /* move to the line above */
       for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
         emovcury(editor,i,-1);
     }
@@ -434,7 +482,7 @@ eeditor_msg(
       editor->lyview = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
     } else
     {
-      /* move to the live below */
+      /* move to the line below */
       for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
         emovcury(editor,i,+1);
     }
@@ -507,8 +555,8 @@ eeditor_msg(
       for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
       {
         if(rxchr() != 0)
-        { eputchar(editor,i, rxchr());
-          emovcurx(editor,i,       1);
+        {
+          emovcurx(editor,i,eputchar(editor,i,rxchr()));
         }
       }
     }

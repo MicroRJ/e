@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 
       if(cmd.widget.focused)
       {
-        if(ecmd(rect_cut(&r,RECT_kBOT,32),&cmd))
+        if(ewdg(rect_cut(&r,RECT_kBOT,32),&cmd))
         {
           char *buffer = cmd.buffer.memory;
           int   length = cmd.buffer.length;

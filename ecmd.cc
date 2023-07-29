@@ -25,69 +25,6 @@ ecmd(erect_t rect, eeditor_t *widget)
 {
 	int result = ccfalse;
 
-  // if(widget->widget.focused)
-  // {
-  //   if(rxtstkey(rx_kHOME))
-  //   {
-  //   	esetcurx(widget,0);
-  //   } else
-  //   if(rxtstkey(rx_kEND))
-  //   {
-  //   	esetcurx(widget,egetlen(widget,egetcury(widget)));
-  //   } else
-  //   if(rxtstkey(rx_kKEY_UP))
-  //   {
-  //   	/* history */
-  //   } else
-  //   if(rxtstkey(rx_kKEY_DOWN))
-  //   {
-  //   	/* history */
-  //   } else
-  //   if(rxtstkey(rx_kKEY_LEFT))
-  //   { if(rxisctrl())
-  //     {
-  //     } else
-  //     {
-  //       emovcurx(widget,-1);
-  //     }
-  //   } else
-  //   if(rxtstkey(rx_kKEY_RIGHT))
-  //   {
-  //     if(rxisctrl())
-  //     {
-  //     } else
-  //     {
-  //       emovcurx(widget,+1);
-  //     }
-  //   } else
-  //   if(rxtstkey(rx_kDELETE))
-  //   {
-  //   	edelchar(widget    );
-  //   } else
-  //   if(rxtstkey(rx_kBCKSPC))
-  //   { if(ecurloc(widget) != 0)
-  //     { emovcurx(widget, -1);
-  //       edelchar(widget    );
-  //     }
-  //   } else
-  //   if(rxtstkey(rx_kRETURN))
-  //   {
-  //   	result = cctrue;
-  //   } else
-  //   { if(rxisctrl())
-  //     {
-
-  //     } else
-  //     {
-  //       if(rxchr() != 0)
-  //       { eputchar(widget, rxchr());
-  //         emovcurx(widget,       1);
-  //       }
-  //     }
-  //   }
-
-  // }
-
 
   // /* drawing */
   // set_clip_rect(rect);

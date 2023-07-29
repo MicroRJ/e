@@ -201,7 +201,6 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
           }
         }
 
-        // Todo: should we instead store the two parts?
         the_token=cctoken_kLITFLO;
         // l->tok.real=u+d/p;
       } else

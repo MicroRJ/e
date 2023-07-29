@@ -19,11 +19,6 @@
 **
 */
 
-
-int
-eeditor_draw_text_run_callback(
-  void *user, int index, int *code, rxcolor_t *color);
-
 int
 ewdg(erect_t rect, eeditor_t *widget)
 {
@@ -60,14 +55,14 @@ ewdg(erect_t rect, eeditor_t *widget)
 
   if(widget->widget.focused)
   {
-  	/* todo */
-    rxcolor_t color = RX_COLOR_GREEN;
+    /* todo */
+    rxcolor_t color = RX_COLOR_CYAN;
     color.a = rxclamp((.5+sin((rx.total_seconds/.250) * rxPI_F))*.5,.05,1.);
 
-  	for(int i=0;i<ccarrlen(widget->cursor);i+=1)
-  	{
-	    draw_rect(ecurrec(widget,i,rect),color);
-  	}
+    for(int i=0;i<ccarrlen(widget->cursor);i+=1)
+    {
+      draw_rect(ecurrec(widget,i,rect),color);
+    }
   }
 
   set_clip_rect(RECT_HUGE);

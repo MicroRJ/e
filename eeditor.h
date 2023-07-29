@@ -62,10 +62,17 @@ typedef struct eeditor_t
   } style;
 } eeditor_t;
 
+/* this is temporary */
 void
 eeditor_msg(
   eeditor_t *);
 
+/* this is temporary */
+int
+eeditor_draw_text_run_callback(
+  void *user, int index, int *code, rxcolor_t *color);
+
+/* this is temporary */
 void
 erecache(
   eeditor_t *);
@@ -133,15 +140,20 @@ void
 emovcury(
   eeditor_t *,int index, int mov);
 
-void
+int
 eputchar(
   eeditor_t *,int index, int chr);
 void
 edelchar(
   eeditor_t *,int index);
+
+/* these are to be implemented */
 void
-enewline(
-  eeditor_t *,int index);
+eaddrow(
+  eeditor_t *, int offset, int number);
+void
+eremrow(
+  eeditor_t *, int offset, int number);
 
 void
 eeditor_load(
