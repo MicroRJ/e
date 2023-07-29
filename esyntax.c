@@ -47,70 +47,71 @@ esyntax_include_token(esyntax_t *syntax, char const *name, int type)
 void
 esyntax_init(esyntax_t *reader)
 {
-  esyntax_include_token(reader,"__asm",cctoken_Kmsvc_attr_asm);
-  esyntax_include_token(reader,"__based",cctoken_Kmsvc_attr_based);
-  esyntax_include_token(reader,"__cdecl",cctoken_Kmsvc_attr_cdecl);
-  esyntax_include_token(reader,"__clrcall",cctoken_Kmsvc_attr_clrcall);
-  esyntax_include_token(reader,"__fastcall",cctoken_Kmsvc_attr_fastcall);
-  esyntax_include_token(reader,"__inline",cctoken_Kmsvc_attr_inline);
-  esyntax_include_token(reader,"__stdcall",cctoken_Kmsvc_attr_stdcall);
-  esyntax_include_token(reader,"__thiscall",cctoken_Kmsvc_attr_thiscall);
-  esyntax_include_token(reader,"__vectorcal",cctoken_Kmsvc_attr_vectorcal);
+	/* these hashes will instead be auto-generated at compile-time, eventually */
+  esyntax_include_token(reader,"__asm",ETOKEN_kMSVC_ATTR_asm);
+  esyntax_include_token(reader,"__based",ETOKEN_kMSVC_ATTR_based);
+  esyntax_include_token(reader,"__cdecl",ETOKEN_kMSVC_ATTR_cdecl);
+  esyntax_include_token(reader,"__clrcall",ETOKEN_kMSVC_ATTR_clrcall);
+  esyntax_include_token(reader,"__fastcall",ETOKEN_kMSVC_ATTR_fastcall);
+  esyntax_include_token(reader,"__inline",ETOKEN_kMSVC_ATTR_inline);
+  esyntax_include_token(reader,"__stdcall",ETOKEN_kMSVC_ATTR_stdcall);
+  esyntax_include_token(reader,"__thiscall",ETOKEN_kMSVC_ATTR_thiscall);
+  esyntax_include_token(reader,"__vectorcal",ETOKEN_kMSVC_ATTR_vectorcal);
 
-  esyntax_include_token(reader,"_Alignof",cctoken_Kalign_of);
-  esyntax_include_token(reader,"_Alignas",cctoken_Kalign_as);
+  esyntax_include_token(reader,"_Alignof",ETOKEN_kALIGNOF);
+  esyntax_include_token(reader,"_Alignas",ETOKEN_kALIGNAS);
 
-  esyntax_include_token(reader,"const",cctoken_Kconst);
-  esyntax_include_token(reader,"restrict",cctoken_Krestrict);
-  esyntax_include_token(reader,"volatile",cctoken_Kvolatile);
+  esyntax_include_token(reader,"const",ETOKEN_kCONST);
+  esyntax_include_token(reader,"restrict",ETOKEN_kRESTRICT);
+  esyntax_include_token(reader,"volatile",ETOKEN_kVOLATILE);
 
-  esyntax_include_token(reader,"inline",cctoken_Kinline);
-  esyntax_include_token(reader,"_Noreturn",cctoken_Kno_return);
+  esyntax_include_token(reader,"inline",ETOKEN_kINLINE);
+  esyntax_include_token(reader,"_Noreturn",ETOKEN_kNO_RETURN);
 
-  esyntax_include_token(reader,"signed",cctoken_kSTDC_SIGNED);
-  esyntax_include_token(reader,"unsigned",cctoken_kSTDC_UNSIGNED);
-  esyntax_include_token(reader,"__int8",cctoken_kMSVC_INT8);
-  esyntax_include_token(reader,"__int16",cctoken_kMSVC_INT16);
-  esyntax_include_token(reader,"__int32",cctoken_kMSVC_INT32);
-  esyntax_include_token(reader,"__int64",cctoken_kMSVC_INT64);
-  esyntax_include_token(reader,"double",cctoken_kSTDC_DOUBLE);
-  esyntax_include_token(reader,"float",cctoken_kSTDC_FLOAT);
-  esyntax_include_token(reader,"long",cctoken_kSTDC_LONG);
-  esyntax_include_token(reader,"int",cctoken_kSTDC_INT);
-  esyntax_include_token(reader,"short",cctoken_kSTDC_SHORT);
-  esyntax_include_token(reader,"char",cctoken_kSTDC_CHAR);
-  esyntax_include_token(reader,"void",cctoken_kVOID);
-  esyntax_include_token(reader,"_Bool",cctoken_kSTDC_BOOL);
+  esyntax_include_token(reader,"signed",ETOKEN_kSTDC_SIGNED);
+  esyntax_include_token(reader,"unsigned",ETOKEN_kSTDC_UNSIGNED);
+  esyntax_include_token(reader,"__int8",ETOKEN_kMSVC_INT8);
+  esyntax_include_token(reader,"__int16",ETOKEN_kMSVC_INT16);
+  esyntax_include_token(reader,"__int32",ETOKEN_kMSVC_INT32);
+  esyntax_include_token(reader,"__int64",ETOKEN_kMSVC_INT64);
+  esyntax_include_token(reader,"double",ETOKEN_kSTDC_DOUBLE);
+  esyntax_include_token(reader,"float",ETOKEN_kSTDC_FLOAT);
+  esyntax_include_token(reader,"long",ETOKEN_kSTDC_LONG);
+  esyntax_include_token(reader,"int",ETOKEN_kSTDC_INT);
+  esyntax_include_token(reader,"short",ETOKEN_kSTDC_SHORT);
+  esyntax_include_token(reader,"char",ETOKEN_kSTDC_CHAR);
+  esyntax_include_token(reader,"void",ETOKEN_kVOID);
+  esyntax_include_token(reader,"_Bool",ETOKEN_kSTDC_BOOL);
 
-  // esyntax_include_token(reader,"_Complex",cctoken_Kcomplex);
-  // esyntax_include_token(reader,"_Atomic",cctoken_Katomic);
+  // esyntax_include_token(reader,"_Complex",ETOKEN_kcomplex);
+  // esyntax_include_token(reader,"_Atomic",ETOKEN_katomic);
 
-  esyntax_include_token(reader,"enum",cctoken_kENUM);
-  esyntax_include_token(reader,"struct",cctoken_kSTRUCT);
+  esyntax_include_token(reader,"enum",ETOKEN_kENUM);
+  esyntax_include_token(reader,"struct",ETOKEN_kSTRUCT);
 
-  esyntax_include_token(reader,"typedef",cctoken_Ktypedef);
+  esyntax_include_token(reader,"typedef",ETOKEN_kTYPEDEF);
 
-  esyntax_include_token(reader,"sizeof",cctoken_kSIZEOF);
+  esyntax_include_token(reader,"sizeof",ETOKEN_kSIZEOF);
 
-  esyntax_include_token(reader,"auto",cctoken_Kauto);
-  esyntax_include_token(reader,"extern",cctoken_Kextern);
-  esyntax_include_token(reader,"register",cctoken_Kregister);
-  esyntax_include_token(reader,"static",cctoken_Kstatic);
-  esyntax_include_token(reader,"_Thread_local",cctoken_Kthread_local);
-  esyntax_include_token(reader,"__declspec",cctoken_Kmsvc_declspec);
+  esyntax_include_token(reader,"auto",ETOKEN_kAUTO);
+  esyntax_include_token(reader,"extern",ETOKEN_kEXTERN);
+  esyntax_include_token(reader,"register",ETOKEN_kREGISTER);
+  esyntax_include_token(reader,"static",ETOKEN_kSTATIC);
+  esyntax_include_token(reader,"_Thread_local",ETOKEN_kTHREAD_LOCAL);
+  esyntax_include_token(reader,"__declspec",ETOKEN_kMSVC_DECLSPEC);
 
-  esyntax_include_token(reader,"if",cctoken_kIF);
-  esyntax_include_token(reader,"switch",cctoken_Kswitch);
-  esyntax_include_token(reader,"else",cctoken_kELSE);
-  esyntax_include_token(reader,"case",cctoken_Kcase);
-  esyntax_include_token(reader,"default",cctoken_Kdefault);
-  esyntax_include_token(reader,"for",cctoken_kFOR);
-  esyntax_include_token(reader,"while",cctoken_kWHILE);
-  esyntax_include_token(reader,"do",cctoken_Kdo);
-  esyntax_include_token(reader,"goto",cctoken_kGOTO);
-  esyntax_include_token(reader,"return",cctoken_kRETURN);
-  esyntax_include_token(reader,"break",cctoken_Kbreak);
-  esyntax_include_token(reader,"continue",cctoken_Kcontinue);
+  esyntax_include_token(reader,"if",ETOKEN_kIF);
+  esyntax_include_token(reader,"switch",ETOKEN_kSWITCH);
+  esyntax_include_token(reader,"else",ETOKEN_kELSE);
+  esyntax_include_token(reader,"case",ETOKEN_kCASE);
+  esyntax_include_token(reader,"default",ETOKEN_kDEFAULT);
+  esyntax_include_token(reader,"for",ETOKEN_kFOR);
+  esyntax_include_token(reader,"while",ETOKEN_kWHILE);
+  esyntax_include_token(reader,"do",ETOKEN_kDO);
+  esyntax_include_token(reader,"goto",ETOKEN_kGOTO);
+  esyntax_include_token(reader,"return",ETOKEN_kRETURN);
+  esyntax_include_token(reader,"break",ETOKEN_kBREAK);
+  esyntax_include_token(reader,"continue",ETOKEN_kCONTINUE);
 
   ccassert(ccerrnon());
 }
@@ -118,20 +119,20 @@ esyntax_init(esyntax_t *reader)
 int
 esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advance)
 {
-  int the_token = cctoken_kINVALID;
+  int the_token = ETOKEN_kINVALID;
 
   char const *cursor = string;
 
   if(length <= 0)
   {
-    the_token = cctoken_kEND;
+    the_token = ETOKEN_kEND;
     goto leave;
   }
 
   switch(cursor[0])
   { default:
     { cursor += 1;
-      the_token = cctoken_kINVALID;
+      the_token = ETOKEN_kINVALID;
     } break;
 
     case '0': case '1': case '2': case '3': case '4':
@@ -201,10 +202,10 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
           }
         }
 
-        the_token=cctoken_kLITFLO;
+        the_token=ETOKEN_kFLOAT;
         // l->tok.real=u+d/p;
       } else
-      { the_token=cctoken_kLITINT;
+      { the_token=ETOKEN_kINTEGER;
         // l->tok.name=(char*)u;
       }
     } break;
@@ -230,11 +231,11 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
 
       cctoken_t *e=cctblsetP(l->table,h);
 
-      the_token = e->name ? e->type : cctoken_kLITIDENT;
+      the_token = e->name ? e->type : ETOKEN_kIDENTIFIER;
     } break;
     case '"':
     {
-      the_token = cctoken_kLITSTR;
+      the_token = ETOKEN_kSTRING;
 
       cursor += 1;
       while((cursor < string + length) &&
@@ -244,40 +245,40 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
 
     } break;
     case ':':
-    { ++ cursor, the_token = cctoken_kCOLON;
+    { ++ cursor, the_token = ETOKEN_kCOLON;
     } break;
     case ',':
-    { ++ cursor, the_token = cctoken_kCMA;
+    { ++ cursor, the_token = ETOKEN_kCOMMA;
     } break;
     case '(':
-    { ++ cursor, the_token = cctoken_kLPAREN;
+    { ++ cursor, the_token = ETOKEN_kLPAREN;
     } break;
     case ')':
-    { ++ cursor, the_token = cctoken_kRPAREN;
+    { ++ cursor, the_token = ETOKEN_kRPAREN;
     } break;
     case '[':
-    { ++ cursor, the_token = cctoken_kLSQUARE;
+    { ++ cursor, the_token = ETOKEN_kLSQUARE;
     } break;
     case ']':
-    { ++ cursor, the_token = cctoken_kRSQUARE;
+    { ++ cursor, the_token = ETOKEN_kRSQUARE;
     } break;
     case '{':
-    { ++ cursor, the_token = cctoken_kLCURLY;
+    { ++ cursor, the_token = ETOKEN_kLCURLY;
     } break;
     case '}':
-    { ++ cursor, the_token = cctoken_kRCURLY;
+    { ++ cursor, the_token = ETOKEN_kRCURLY;
     } break;
     case '~':
     {
-      cursor += 1, the_token = cctoken_kBWINV;
+      cursor += 1, the_token = ETOKEN_kBWINV;
     } break;
     // .
     // ...
     case '.':
     { if(cursor[1] == '.' && cursor[2] == '.')
-      { cursor += 3, the_token = cctoken_Kliteral_ellipsis;
+      { cursor += 3, the_token = ETOKEN_kELLIPSIS;
       } else
-      { cursor += 1, the_token = cctoken_kDOT;
+      { cursor += 1, the_token = ETOKEN_kDOT;
       }
     } break;
     // ^
@@ -285,9 +286,9 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '^':
     {
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kBWXOR_EQL;
+      { cursor += 2, the_token = ETOKEN_kBWXOR_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kBWXOR;
+      { cursor += 1, the_token = ETOKEN_kBWXOR;
       }
     } break;
     // ||
@@ -296,12 +297,12 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '|':
     {
       if(cursor[1]=='|')
-      { cursor += 2, the_token = cctoken_kLGOR;
+      { cursor += 2, the_token = ETOKEN_kLGOR;
       } else
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kBWOR_EQL;
+      { cursor += 2, the_token = ETOKEN_kBWOR_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kBWOR;
+      { cursor += 1, the_token = ETOKEN_kBWOR;
       }
     } break;
     // &&
@@ -310,19 +311,19 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '&':
     {
       if(cursor[1]=='&')
-      { cursor += 2, the_token = cctoken_kLGAND;
+      { cursor += 2, the_token = ETOKEN_kLGAND;
       } else
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kBWAND_EQL;
+      { cursor += 2, the_token = ETOKEN_kBWAND_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kBWAND;
+      { cursor += 1, the_token = ETOKEN_kBWAND;
       }
     } break;
     case '/':
     { if(cursor[1] == '/')
       {
         cursor += 2;
-        the_token = cctoken_kCOMMENT;
+        the_token = ETOKEN_kCOMMENT;
 
         while((cursor < string + length) &&
           (cursor[0] != '\r') &&
@@ -331,7 +332,7 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
       if(cursor[1] == '*')
       {
         cursor += 2;
-        the_token = cctoken_kCOMMENT;
+        the_token = ETOKEN_kCOMMENT;
 
         while((cursor < string + length - 1))
         {
@@ -349,9 +350,9 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
 
       } else
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kDIV_EQL;
+      { cursor += 2, the_token = ETOKEN_kDIV_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kDIV;
+      { cursor += 1, the_token = ETOKEN_kDIV;
       }
     } break;
     // *=
@@ -359,42 +360,42 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '*':
     {
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kMUL_EQL;
+      { cursor += 2, the_token = ETOKEN_kMUL_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kMUL;
+      { cursor += 1, the_token = ETOKEN_kMUL;
       }
     } break;
     // +=,+
     case '+':
     { if(cursor[1]=='=')
-        cursor += 2, the_token = cctoken_kADD_EQL;
+        cursor += 2, the_token = ETOKEN_kADD_EQL;
       else
-        cursor += 1, the_token = cctoken_kADD;
+        cursor += 1, the_token = ETOKEN_kADD;
     } break;
     // -=,-
     case '-':
     { if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kSUB_EQL;
+      { cursor += 2, the_token = ETOKEN_kSUB_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kSUB;
+      { cursor += 1, the_token = ETOKEN_kSUB;
       }
     } break;
     // ==
     // =
     case '=':
     { if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kTEQ;
+      { cursor += 2, the_token = ETOKEN_kTEQ;
       } else
-      { cursor += 1, the_token = cctoken_kASSIGN;
+      { cursor += 1, the_token = ETOKEN_kASSIGN;
       }
     } break;
     // !=
     // !
     case '!':
     { if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kFEQ;
+      { cursor += 2, the_token = ETOKEN_kFEQ;
       } else
-      { cursor += 2, the_token = cctoken_kLGNEG;
+      { cursor += 2, the_token = ETOKEN_kLGNEG;
       }
     } break;
     // >=
@@ -402,12 +403,12 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '>':
     {
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kGTE;
+      { cursor += 2, the_token = ETOKEN_kGTE;
       } else
       if(cursor[1]=='>')
-      { cursor += 2, the_token = cctoken_kBWSHR;
+      { cursor += 2, the_token = ETOKEN_kBWSHR;
       } else
-      { cursor += 1, the_token = cctoken_kGTN;
+      { cursor += 1, the_token = ETOKEN_kGTN;
       }
     } break;
     // <=
@@ -415,12 +416,12 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '<':
     {
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kLTE;
+      { cursor += 2, the_token = ETOKEN_kLTE;
       } else
       if(cursor[1]=='<')
-      { cursor += 2, the_token = cctoken_kBWSHL;
+      { cursor += 2, the_token = ETOKEN_kBWSHL;
       } else
-      { cursor += 1, the_token = cctoken_kLTN;
+      { cursor += 1, the_token = ETOKEN_kLTN;
       }
     } break;
     // %=
@@ -428,21 +429,21 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
     case '%':
     {
       if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kMOD_EQL;
+      { cursor += 2, the_token = ETOKEN_kMOD_EQL;
       } else
-      { cursor += 1, the_token = cctoken_kMOD;
+      { cursor += 1, the_token = ETOKEN_kMOD;
       }
     } break;
 
     case '?':
     { if(cursor[1]=='=')
-      { cursor += 2, the_token = cctoken_kINVALID;
+      { cursor += 2, the_token = ETOKEN_kINVALID;
       } else
-      { cursor += 2, the_token = cctoken_kINVALID;
+      { cursor += 2, the_token = ETOKEN_kINVALID;
       }
     } break;
     case '\0':
-    { cursor += 1, the_token = cctoken_kEND;
+    { cursor += 1, the_token = ETOKEN_kEND;
     } break;
   }
 

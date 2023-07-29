@@ -19,7 +19,7 @@
 **
 */
 
-typedef union erect_t
+typedef union erect_t/* lol */
 { struct
   { rxvec2i_t xy0;
     rxvec2i_t xy1;
@@ -106,6 +106,7 @@ erect_t get_window_client_rect()
   rect = rect_by_size(0,0,rx.size_x,rx.size_y);
   return rect;
 }
+
 int
 rect_in_xy(
   erect_t rect, int x, int y)

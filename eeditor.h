@@ -158,7 +158,8 @@ eremrow(
 void
 eeditor_load(
   eeditor_t *, char const *);
-void
+
+int
 eeditor_unload(
   eeditor_t *, char const *);
 

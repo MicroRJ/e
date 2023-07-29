@@ -19,6 +19,14 @@
 **
 */
 
+/* I think this is going to be largely temporary, I think for the most part
+ this is going to be auto-generated, I would like to have a file where you
+ describe the language and then generate a c executable (dll) that we can
+ plugin even at runtime that does the work, instead of wasting time creating something
+ incredibly repetitive and tiresome for each language, and you end up with something
+ that could be re-used later, and if you want to create your own more efficient parser
+ then we would allow for that too. */
+
 /* todo */
 typedef struct cctoken_t cctoken_t;
 typedef struct cctoken_t
@@ -33,173 +41,130 @@ typedef struct esyntax_t
 } esyntax_t;
 
 /* default tokens:  learn.microsoft.com/en-us/cpp/c-language/c-language-reference */
-typedef enum cctoken_k
+typedef enum ETOKEN_k
 {
-  cctoken_kINVALID=0,
-  /**
-   * Group: syntactic operators.
-   **/
-  cctoken_kEND,
+  ETOKEN_kINVALID = 0,
+  ETOKEN_kEND    ,
+  ETOKEN_kLPAREN , // '('
+  ETOKEN_kRPAREN , // ')'
+  ETOKEN_kLCURLY , // '{'
+  ETOKEN_kRCURLY , // '}'
+  ETOKEN_kLSQUARE, // '['
+  ETOKEN_kRSQUARE, // ']'
 
-  // Todo: remove
-  cctoken_Kendimpl, // '\r\n'
-  cctoken_Kendexpl, // ';'
+  ETOKEN_kCOMMA,   // ','
+  ETOKEN_kCOLON,   // ':'
+  ETOKEN_kSPACE,   // ' '
 
-  cctoken_kLPAREN,  // '('
-  cctoken_kRPAREN,  // ')'
-  cctoken_kLCURLY,  // '{'
-  cctoken_kRCURLY,  // '}'
-  cctoken_kLSQUARE, // '['
-  cctoken_kRSQUARE, // ']'
+  ETOKEN_kELLIPSIS,
+  ETOKEN_kCOMMENT,
+  ETOKEN_kCHARACTER,
+  ETOKEN_kSTRING,
+  ETOKEN_kIDENTIFIER,
+  ETOKEN_kINTEGER,
+  ETOKEN_kFLOAT,
+  /* control statements */
+  ETOKEN_kIF,
+  ETOKEN_kELSE,
+  ETOKEN_kSWITCH,
 
-  cctoken_kCMA,   // ','
-  cctoken_kCOLON, // ':'
-  cctoken_Kspace, // ' '
-  /**
-   * Group: literals.
-   **/
-  cctoken_Kliteral_ellipsis,
-  cctoken_Kliteral_comment,
-  cctoken_Kliteral_character,
-  cctoken_kLITSTR,
-  cctoken_Kliteral_string_format,
-  cctoken_kLITSTR_INVALID,
-  cctoken_kLITIDENT,
-  cctoken_kLITINT,
-  cctoken_kLITFLO,
-  /**
-   * Group: msvc attributes.
-   *
-   *  ** these are reserved keywords **
-   **/
-  cctoken_Kmsvc_attr_asm,       // maps to:  __asm
-  cctoken_Kmsvc_attr_based,     // maps to:  __based
-  cctoken_Kmsvc_attr_cdecl,     // maps to:  __cdecl
-  cctoken_Kmsvc_attr_clrcall,   // maps to:  __clrcall
-  cctoken_Kmsvc_attr_fastcall,  // maps to:  __fastcall
-  cctoken_Kmsvc_attr_inline,    // maps to:  __inline
-  cctoken_Kmsvc_attr_stdcall,   // maps to:  __stdcall
-  cctoken_Kmsvc_attr_thiscall,  // maps to:  __thiscall
-  cctoken_Kmsvc_attr_vectorcal, // maps to:  __vectorcal
-  /**
-   * Group: alignment specifiers
-   *
-   * ** these are reserved keywords **
-   **/
-  kttc__algn_spec_0,
-  cctoken_Kalign_of, // maps to: _Alignof
-  cctoken_Kalign_as, // maps to: _Alignas
-  kttc__algn_spec_1,
-  /**
-   * Group: type qualifiers
-   *
-   * ** these are reserved keywords **
-   **/
-  cctype_qual_0,
-  cctoken_Kconst,    // maps to: const
-  cctoken_Krestrict, // maps to: restrict
-  cctoken_Kvolatile, // maps to: volatile
-  cctype_qual_1,
-  /**
-   * Group: function specifiers.
-   *
-   * ** these are reserved keywords **
-   **/
-  kttc__func_spec_0,
-  cctoken_Kinline,
-  cctoken_Kno_return,
-  kttc__func_spec_1,
+  ETOKEN_kCASE,
+  ETOKEN_kDEFAULT,
 
-  // Note: type specifiers ...
-  cctoken_kVOID,
-  cctoken_kSTDC_INT,
-  cctoken_kSTDC_LONG,
-  cctoken_kSTDC_SHORT,
-  cctoken_kSTDC_DOUBLE,
-  cctoken_kSTDC_FLOAT,
-  cctoken_kSTDC_CHAR,
-  cctoken_kSTDC_BOOL,     // _Bool
-  cctoken_kSTDC_SIGNED,   // group start
-  cctoken_kSTDC_UNSIGNED,
-  cctoken_kMSVC_INT8,     // __int8
-  cctoken_kMSVC_INT16,    // __int16
-  cctoken_kMSVC_INT32,    // __int32
-  cctoken_kMSVC_INT64,    // __int64
-  cctoken_kENUM,
-  cctoken_kSTRUCT,
+  ETOKEN_kFOR,
+  ETOKEN_kWHILE,
+  ETOKEN_kDO,
 
+  ETOKEN_kGOTO,
+  ETOKEN_kRETURN,
+  ETOKEN_kBREAK,
+  ETOKEN_kCONTINUE,
+
+  ETOKEN_kBWINV,
+  ETOKEN_kLGNEG,  // !
+  ETOKEN_kDOT,
+  ETOKEN_kMUL,   // Note: multiplicative
+  ETOKEN_kDIV,
+  ETOKEN_kMOD,
+  ETOKEN_kADD,   // Note: additive
+  ETOKEN_kSUB,
+  ETOKEN_kBWSHL, // Note: shift
+  ETOKEN_kBWSHR,
+  ETOKEN_kGTN,   // Note: relational
+  ETOKEN_kLTN,
+  ETOKEN_kTEQ,   // Note: equality
+  ETOKEN_kFEQ,
+  ETOKEN_kBWAND,
+  ETOKEN_kBWXOR,
+  ETOKEN_kBWOR,
+  ETOKEN_kLGAND,
+  ETOKEN_kLGOR,
+  ETOKEN_kQMRK,
+
+  ETOKEN_kASSIGN,   // =
+  ETOKEN_kMUL_EQL,  // *=
+  ETOKEN_kDIV_EQL,  // /=
+  ETOKEN_kMOD_EQL,  // %=
+  ETOKEN_kADD_EQL,  // +=
+  ETOKEN_kSUB_EQL,  // -=
+  ETOKEN_kBWSL_EQL, // <<=
+  ETOKEN_kBWSR_EQL, // >>=
+
+  ETOKEN_kGTE,
+  ETOKEN_kLTE,
+  ETOKEN_kBWAND_EQL,
+  ETOKEN_kBWXOR_EQL,
+  ETOKEN_kBWOR_EQL,
+  /* Group: msvc attributes. */
+  ETOKEN_kMSVC_ATTR_asm,       // maps to:  __asm
+  ETOKEN_kMSVC_ATTR_based,     // maps to:  __based
+  ETOKEN_kMSVC_ATTR_cdecl,     // maps to:  __cdecl
+  ETOKEN_kMSVC_ATTR_clrcall,   // maps to:  __clrcall
+  ETOKEN_kMSVC_ATTR_fastcall,  // maps to:  __fastcall
+  ETOKEN_kMSVC_ATTR_inline,    // maps to:  __inline
+  ETOKEN_kMSVC_ATTR_stdcall,   // maps to:  __stdcall
+  ETOKEN_kMSVC_ATTR_thiscall,  // maps to:  __thiscall
+  ETOKEN_kMSVC_ATTR_vectorcal, // maps to:  __vectorcal
+  ETOKEN_kMSVC_DECLSPEC,       // __declspec
+  /* alignment specifiers */
+  ETOKEN_kALIGNOF, // maps to: _Alignof
+  ETOKEN_kALIGNAS, // maps to: _Alignas
+
+  /* type qualifiers */
+  ETOKEN_kCONST,    // maps to: const
+  ETOKEN_kRESTRICT, // maps to: restrict
+  ETOKEN_kVOLATILE, // maps to: volatile
+
+  /* function specifiers. */
+  ETOKEN_kINLINE,
+  ETOKEN_kNO_RETURN,
+
+  ETOKEN_kVOID,
+  ETOKEN_kSTDC_INT,
+  ETOKEN_kSTDC_LONG,
+  ETOKEN_kSTDC_SHORT,
+  ETOKEN_kSTDC_DOUBLE,
+  ETOKEN_kSTDC_FLOAT,
+  ETOKEN_kSTDC_CHAR,
+  ETOKEN_kSTDC_BOOL,     // _Bool
+  ETOKEN_kSTDC_SIGNED,   // group start
+  ETOKEN_kSTDC_UNSIGNED,
+  ETOKEN_kMSVC_INT8,     // __int8
+  ETOKEN_kMSVC_INT16,    // __int16
+  ETOKEN_kMSVC_INT32,    // __int32
+  ETOKEN_kMSVC_INT64,    // __int64
+  ETOKEN_kENUM,
+  ETOKEN_kSTRUCT,
   // Todo:
-  // cctoken_Kcomplex,       // _Complex
-  // cctoken_Katomic,        // _Atomic
+  // ETOKEN_kcomplex,       // _Complex
+  // ETOKEN_katomic,        // _Atomic
 
-  // Note: storage classes
-  cctoken_Ktypedef,
-  cctoken_Kauto,
-  cctoken_Kextern,
-  cctoken_Kregister,
-  cctoken_Kstatic,
-  cctoken_Kthread_local, // _Thread_local
-  cctoken_Kmsvc_declspec, // __declspec
-
-
-  cctoken_kSIZEOF,
-
-  /**
-   * Group: control statements.
-
-   * ** these are reseverd keywords **
-   **/
-  cctoken_kIF,
-  cctoken_kELSE,
-  cctoken_Kswitch,
-
-  cctoken_Kcase,
-  cctoken_Kdefault,
-
-  cctoken_kFOR,
-  cctoken_kWHILE,
-  cctoken_Kdo,
-
-  cctoken_kGOTO,
-  cctoken_kRETURN,
-  cctoken_Kbreak,
-  cctoken_Kcontinue,
-
-  cctoken_kBWINV,
-  cctoken_kLGNEG,  // !
-  cctoken_kDOT,
-  cctoken_kMUL,   // Note: multiplicative
-  cctoken_kDIV,
-  cctoken_kMOD,
-  cctoken_kADD,   // Note: additive
-  cctoken_kSUB,
-  cctoken_kBWSHL, // Note: shift
-  cctoken_kBWSHR,
-  cctoken_kGTN,   // Note: relational
-  cctoken_kLTN,
-  cctoken_kTEQ,   // Note: equality
-  cctoken_kFEQ,
-  cctoken_kBWAND,
-  cctoken_kBWXOR,
-  cctoken_kBWOR,
-  cctoken_kLGAND,
-  cctoken_kLGOR,
-  cctoken_kQMRK,
-
-  cctoken_kASSIGN, // Note: assignment
-  cctoken_kMUL_EQL,
-  cctoken_kDIV_EQL,
-  cctoken_kMOD_EQL,
-  cctoken_kADD_EQL,
-  cctoken_kSUB_EQL,
-  cctoken_kBWSL_EQL,
-  cctoken_kBWSR_EQL,
-
-  cctoken_kGTE,
-  cctoken_kLTE,
-  cctoken_kBWAND_EQL,
-  cctoken_kBWXOR_EQL,
-  cctoken_kBWOR_EQL,
-
-  cctoken_kCOMMENT,
-} cctoken_k;
+  /* storage classes */
+  ETOKEN_kTYPEDEF,
+  ETOKEN_kAUTO,
+  ETOKEN_kEXTERN,
+  ETOKEN_kREGISTER,
+  ETOKEN_kSTATIC,
+  ETOKEN_kTHREAD_LOCAL,  // _Thread_local
+  ETOKEN_kSIZEOF,
+} ETOKEN_k;

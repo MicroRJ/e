@@ -1,4 +1,7 @@
-
+
+
+
+
   *-------------------------*
   TIMENTE MORTEM, OMNIA TIMEO
   *-------------------------*
@@ -45,6 +48,15 @@ introduce workspaces (project config)
 multibuffer support
 buffer window events, otherwise we risk missing them
 render the indentation to know the difference between whitespace and it
-support for other fonts
 better indentation mechanic that takes into account white space added
+support for ttf fonts
 convert indentation to white space
+
+
+
+
+
+
+
+
+

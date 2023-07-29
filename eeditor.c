@@ -389,21 +389,37 @@ eeditor_load(
   }
 }
 
-void
+/* todo: this shouldn't be platform specific */
+int
 eeditor_unload(
   eeditor_t *editor, char const *name)
 {
+  int result = ccfalse;
+
   /* todo: this should be safer */
-  if(name != 0 && strlen(name) != 0)
+  if((name != 0) && (strlen(name) != 0))
   {
-    void *file = ccopenfile(name,"w");
+    HANDLE file = CreateFileA(name,
+      GENERIC_WRITE,FILE_SHARE_WRITE|FILE_SHARE_READ,0x00,CREATE_ALWAYS,0x00,0x00);
 
-    ccpushfile(file,0,
-      editor->buffer.length,
-      editor->buffer.memory);
+    if(file != INVALID_HANDLE_VALUE)
+    {
+      DWORD length = 0;
 
-    ccclosefile(file);
+      /* todo: convert indentations to white space here? */
+      if(WriteFile(file,
+          editor->buffer.memory,
+          editor->buffer.length,&length,0x00))
+      {
+        result = length == editor->buffer.length;
+      }
+
+      CloseHandle(file);
+    }
   }
+
+
+  return result;
 }
 
 void
@@ -589,56 +605,56 @@ eeditor_draw_text_run_callback(
 
     switch(token)
     {
-      case cctoken_kCOMMENT:
+      case ETOKEN_kCOMMENT:
       {
         *color = RX_COLOR_SILVER;
       } break;
-      case cctoken_kLITSTR:
+      case ETOKEN_kSTRING:
       { *color = RX_COLOR_TEAL;
       } break;
-      case cctoken_kLITINT:
-      case cctoken_kLITFLO:
+      case ETOKEN_kINTEGER:
+      case ETOKEN_kFLOAT:
       { *color = RX_COLOR_CYAN;
       } break;
-      case cctoken_kIF:
-      case cctoken_kELSE:
-      case cctoken_Kswitch:
-      case cctoken_Kcase:
-      case cctoken_Kdefault:
-      case cctoken_kFOR:
-      case cctoken_kWHILE:
-      case cctoken_Kdo:
-      case cctoken_kGOTO:
-      case cctoken_kRETURN:
-      case cctoken_Kbreak:
-      case cctoken_Kcontinue:
-      case cctoken_kVOID:
+      case ETOKEN_kIF:
+      case ETOKEN_kELSE:
+      case ETOKEN_kSWITCH:
+      case ETOKEN_kCASE:
+      case ETOKEN_kDEFAULT:
+      case ETOKEN_kFOR:
+      case ETOKEN_kWHILE:
+      case ETOKEN_kDO:
+      case ETOKEN_kGOTO:
+      case ETOKEN_kRETURN:
+      case ETOKEN_kBREAK:
+      case ETOKEN_kCONTINUE:
+      case ETOKEN_kVOID:
       {
         *color = RX_COLOR_RED;
       } break;
-      case cctoken_kSTDC_INT:
-      case cctoken_kSTDC_LONG:
-      case cctoken_kSTDC_SHORT:
-      case cctoken_kSTDC_DOUBLE:
-      case cctoken_kSTDC_FLOAT:
-      case cctoken_kSTDC_CHAR:
-      case cctoken_kSTDC_BOOL:
-      case cctoken_kSTDC_SIGNED:
-      case cctoken_kSTDC_UNSIGNED:
-      case cctoken_kMSVC_INT8:
-      case cctoken_kMSVC_INT16:
-      case cctoken_kMSVC_INT32:
-      case cctoken_kMSVC_INT64:
-      case cctoken_kENUM:
-      case cctoken_kSTRUCT:
+      case ETOKEN_kSTDC_INT:
+      case ETOKEN_kSTDC_LONG:
+      case ETOKEN_kSTDC_SHORT:
+      case ETOKEN_kSTDC_DOUBLE:
+      case ETOKEN_kSTDC_FLOAT:
+      case ETOKEN_kSTDC_CHAR:
+      case ETOKEN_kSTDC_BOOL:
+      case ETOKEN_kSTDC_SIGNED:
+      case ETOKEN_kSTDC_UNSIGNED:
+      case ETOKEN_kMSVC_INT8:
+      case ETOKEN_kMSVC_INT16:
+      case ETOKEN_kMSVC_INT32:
+      case ETOKEN_kMSVC_INT64:
+      case ETOKEN_kENUM:
+      case ETOKEN_kSTRUCT:
 
-      case cctoken_Ktypedef:
-      case cctoken_Kauto:
-      case cctoken_Kextern:
-      case cctoken_Kregister:
-      case cctoken_Kstatic:
-      case cctoken_Kthread_local:
-      case cctoken_Kmsvc_declspec:
+      case ETOKEN_kTYPEDEF:
+      case ETOKEN_kAUTO:
+      case ETOKEN_kEXTERN:
+      case ETOKEN_kREGISTER:
+      case ETOKEN_kSTATIC:
+      case ETOKEN_kTHREAD_LOCAL:
+      case ETOKEN_kMSVC_DECLSPEC:
       {
         *color = RX_COLOR_MAGENTA;
       } break;
