@@ -35,27 +35,48 @@
 #include "ewidget.c"
 #include "eeditor.c"
 #include    "ecmd.cc"
+#include "econfig.c"
 
 int main(int argc, char **argv)
 {
   rxinit(L"e");
 
+  if(0)
+  {
+    void *file = ccopenfile(".econfig","r");
+
+    ccu32_t length = 0;
+    char *memory = ccpullfile(file,0,&length);
+    char *cursor = memory;
+
+    char label[0x100];
+    char value[0x100];
+    while(ecfgfld(&length,&memory,label,value))
+    {
+      rxcolor_t *color = (rxcolor_t *)value;
+      ccdebuglog("%s = %f,%f,%f",label,
+        color->r,color->g,color->b);
+    }
+  }
+
+
   eeditor_t editor;
   ZeroMemory(&editor,sizeof(editor));
   esyntax_init(&editor.syntax);
-  eaddcur(&editor);
+  eaddcur(&editor,(ecursor_t){0,0});
 
   eeditor_load(&editor,"todo.txt");
   editor.widget.focused = TRUE;
 
   eeditor_t cmd;
   ZeroMemory(&cmd,sizeof(cmd));
-  eaddcur(&cmd);
+  eaddcur(&cmd,(ecursor_t){0,0});
   cmd.widget.focused = FALSE;
 
   do
   {
     rx2d();
+
 
     if(rxtstkey(rx_kKEY_F5))
     {

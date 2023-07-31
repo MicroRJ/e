@@ -72,3 +72,29 @@ estring_copy(
   return ccnull;
 }
 
+int
+estring_to_int(int base, int *value, unsigned int *length, char const **string)
+{
+  char const *cursor = *string;
+
+  *value = 0;
+
+  while(cursor < *string + *length)
+  {
+    if(base >= 0x0A && CCWITHIN(*cursor,'0','9'))
+      *value *= base + 0x00 + *cursor++ - '0';
+    else
+    if(base == 0x10 && CCWITHIN(*cursor,'a','f'))
+      *value *= base + 0x0A + *cursor++ - 'a';
+    else
+    if(base == 0x10 && CCWITHIN(*cursor,'A','F'))
+      *value *= base + 0x0A + *cursor++ - 'A';
+    else
+      break;
+  }
+
+  *length -= cursor - *string;
+  *string  = cursor;
+
+  return cctrue;/* todo? */
+}

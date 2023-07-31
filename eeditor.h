@@ -22,13 +22,14 @@
 
 typedef struct ecursor_t
 {
+  int      xchar;
+  int      yline;
+
   /* there's no need to store this per cursor, is there? */
   unsigned select: 1;
   int      selmin;
   int      selmax;
 
-  int      xchar;
-  int      yline;
 } ecursor_t;
 
 typedef struct erow_t
@@ -79,8 +80,11 @@ erecache(
 
 /* cursor */
 int
-eaddcur(
+enumcur(
   eeditor_t *);
+int
+eaddcur(
+  eeditor_t *, ecursor_t cur);
 void
 esetcur(
   eeditor_t *, int, ecursor_t cur);

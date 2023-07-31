@@ -20,18 +20,77 @@
 */
 
 /* todo: cursors need to be sorted and merged if occupy the same slot */
+
 int
-eaddcur(
+ecurnum(
   eeditor_t *editor)
 {
-  ecursor_t *cur = ccarradd(editor->cursor,1);
-  cur->select = 0;
-  cur->selmin = 0;
-  cur->selmax = 0;
-  cur->xchar  = 0;
-  cur->yline  = 0;
+  return ccarrlen(editor->cursor);
+}
 
-  return ccarrlen(editor->cursor) - 1;
+int
+ecurcmp(
+  ecursor_t c0, ecursor_t c1)
+{
+  return
+    c0.yline != c1.yline ?
+      (c0.yline > c1.yline ? +1 :
+       c0.yline < c1.yline ? -1 : 0) :
+
+      (c0.xchar > c1.xchar ? +1 :
+       c0.xchar < c1.xchar ? -1 : 0) ;
+}
+
+int
+efndcur(
+  eeditor_t *editor, int xchar, int yline)
+{
+  /* todo */
+  for(int i=0; i<ecurnum(editor); i+=1)
+  { if( (egetcurx(editor,i) == xchar) &&
+        (egetcury(editor,i) == yline) ) return i;
+  }
+
+  return - 1;
+}
+
+/* probably do not use bubble sort */
+void
+esrtcur(
+  eeditor_t *editor)
+{
+  int sorted;
+
+  do
+  {
+    sorted = cctrue;
+
+    for(int i=0; i<ecurnum(editor)-1; i+=1)
+    {
+      ecursor_t c0 = egetcur(editor,i+0);
+      ecursor_t c1 = egetcur(editor,i+1);
+
+      int cmp = ecurcmp(c0,c1);
+      if(cmp == +1)
+      { esetcur(editor,i+0,c1);
+        esetcur(editor,i+1,c0);
+
+        sorted = ccfalse;
+      }
+    }
+  } while(sorted != cctrue);
+}
+
+
+int
+eaddcur(
+  eeditor_t *editor, ecursor_t cur)
+{
+  ecursor_t *mem = ccarradd(editor->cursor,1);
+  memcpy(mem,&cur,sizeof(cur));
+
+  esrtcur(editor);
+  return efndcur(editor,cur.xchar,cur.yline);
 }
 
 void
@@ -426,6 +485,13 @@ void
 eeditor_msg(
   eeditor_t *editor)
 {
+  if(rxtstkey(rx_kESCAPE))
+  {
+    /* todo */
+    ccdlb_t *dlb = ccdlb(editor->cursor);
+    dlb->sze_min = 1;
+
+  } else
   if(rxtstkey(rx_kMVWHEEL))
   {
     /* scroll up */
@@ -435,20 +501,20 @@ eeditor_msg(
   if(rxtstkey(rx_kHOME))
   {
     /* move to the start of the line */
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
       esetcurx(editor,i,0);
 
   } else
   if(rxtstkey(rx_kEND))
   {
     /* move to the end of the line */
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
       esetcurx(editor,i,egetlen(editor,egetcury(editor,i)));
 
   } else
   if(rxisctrl() && rxtstkey('X'))
   {
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
       erow_t row = egetrow(editor,egetcury(editor,i));
 
@@ -469,7 +535,7 @@ eeditor_msg(
     {
       ecursor_t cur = egetcur(editor,0);
       cur.yline -= 1;
-      esetcur(editor,eaddcur(editor),cur);
+      eaddcur(editor,cur);
     } else
     if(rxisctrl())
     {
@@ -479,7 +545,7 @@ eeditor_msg(
     } else
     {
       /* move to the line above */
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
         emovcury(editor,i,-1);
     }
   } else
@@ -487,9 +553,9 @@ eeditor_msg(
   {
     if(rxisctrl() && rxismenu())
     {
-      ecursor_t cur = egetcur(editor,ccarrlen(editor->cursor)-1);
+      ecursor_t cur = egetcur(editor,ecurnum(editor)-1);
       cur.yline += 1;
-      esetcur(editor,eaddcur(editor),cur);
+      eaddcur(editor,cur);
     } else
     if(rxisctrl())
     {
@@ -499,14 +565,14 @@ eeditor_msg(
     } else
     {
       /* move to the line below */
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
         emovcury(editor,i,+1);
     }
   } else
   if(rxtstkey(rx_kKEY_LEFT))
   { if(rxisctrl())
     {
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
       {
         if(is_word_delim(ecurchr(editor,i,-1)))
         { while(ecurchr(editor,i,-1)!=0 && is_word_delim(ecurchr(editor,i,-1)))
@@ -518,7 +584,7 @@ eeditor_msg(
       }
     } else
     {
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
         emovcurx(editor,i,-1);
     }
   } else
@@ -526,7 +592,7 @@ eeditor_msg(
   {
     if(rxisctrl())
     {
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
       {
         if(is_word_delim(ecurchr(editor,i,0)))
         { while(ecurchr(editor,i,0)!=0 && is_word_delim(ecurchr(editor,i,0)))
@@ -538,19 +604,19 @@ eeditor_msg(
       }
     } else
     {
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
         emovcurx(editor,i,+1);
     }
   } else
   if(rxtstkey(rx_kDELETE))
   {
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
       if(ecurloc(editor,i) < editor->buffer.length)
         edelchar(editor,i);
   } else
   if(rxtstkey(rx_kBCKSPC))
   {
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
       if(ecurloc(editor,i) != 0)
       { emovcurx(editor,i, -1);
@@ -560,7 +626,7 @@ eeditor_msg(
   } else
   if(rxtstkey(rx_kRETURN))
   {
-    for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+    for(int i=ecurnum(editor)-1;i>=0;i-=1)
       enewline(editor,i);
   } else
   { if(rxisctrl())
@@ -568,7 +634,7 @@ eeditor_msg(
 
     } else
     {
-      for(int i=ccarrlen(editor->cursor)-1;i>=0;i-=1)
+      for(int i=ecurnum(editor)-1;i>=0;i-=1)
       {
         if(rxchr() != 0)
         {
