@@ -492,10 +492,10 @@ eeditor_msg(
     dlb->sze_min = 1;
 
   } else
-  if(rxtstkey(rx_kMVWHEEL))
+  if(rx.wnd.in.mice.yscroll != 0)
   {
     /* scroll up */
-    editor->lyview += rxisshft() ? 16 : - rx.yscroll;
+    editor->lyview += rxisshft() ? 16 : - rx.wnd.in.mice.yscroll;
     editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
   } else
   if(rxtstkey(rx_kHOME))

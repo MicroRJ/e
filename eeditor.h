@@ -42,8 +42,9 @@ typedef struct erow_t
 
 typedef struct eeditor_t
 {
-  ewidget_t widget;
-  esyntax_t syntax;
+  ewidget_t  widget;
+
+  esyntax_t  syntax;
 
   ecursor_t *cursor;/* todo */
 
@@ -51,7 +52,7 @@ typedef struct eeditor_t
   int        lyview;
   erow_t    *lcache;
 
-
+  /* todo: this is temporary */
   struct
   {
     /* the y index of the line we're on */

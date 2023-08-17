@@ -90,7 +90,7 @@ erect_t
 get_window_rect()
 {
   RECT wnd_rect;
-  GetWindowRect(rx.Window,&wnd_rect);
+  GetWindowRect(rx.wnd.win32.obj,&wnd_rect);
 
   erect_t rect;
   rect = rect_by_xyxy(
@@ -103,7 +103,7 @@ get_window_rect()
 erect_t get_window_client_rect()
 {
   erect_t rect;
-  rect = rect_by_size(0,0,rx.size_x,rx.size_y);
+  rect = rect_by_size(0,0,rx.wnd.size_x,rx.wnd.size_y);
   return rect;
 }
 
@@ -118,7 +118,10 @@ rect_in_xy(
 
 int cursor_in_rect(erect_t rect)
 {
-  return rect_in_xy(rect,rx.xcursor,rx.ycursor);
+  return
+  rect_in_xy(rect,
+		rx.wnd.in.mice.xcursor,
+		rx.wnd.in.mice.ycursor);
 }
 
 int is_click_leave_rect(erect_t rect)
@@ -206,6 +209,6 @@ draw_text(erect_t rect, const char *text, int size, rxcolor_t color)
 void
 set_clip_rect(erect_t rect)
 {
-  rxclip(
-    rect.x0,rect.y0,rect.x1,rect.y1);
+  //rximp_clip(
+  //  rect.x0,rect.y0,rect.x1,rect.y1);
 }

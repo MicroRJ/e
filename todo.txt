@@ -40,17 +40,17 @@ cmd re-routing
 * overall better rendering backend
 * better text rendering (better alignment) and also faster text rendering
 (currently not efficient at all)
-fullscreen/window_resize support
-improve cpu usage
-better text navigation
-support for external config files
-introduce workspaces (project config)
-multibuffer support
-buffer window events, otherwise we risk missing them
-render the indentation to know the difference between whitespace and it
-better indentation mechanic that takes into account white space added
-support for ttf fonts
-convert indentation to white space
+* fullscreen/window_resize support
+* improve cpu usage
+* better text navigation
+* support for external config files
+* introduce workspaces (project config)
+* multibuffer support
+* buffer window events, otherwise we risk missing them
+* render the indentation to know the difference between whitespace and it
+* better indentation mechanic that takes into account white space added
+* support for ttf fonts
+* convert indentation to white space
 
 
 
