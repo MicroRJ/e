@@ -1,2 +1,3 @@
-theme.color.background = rgb (19,7,13)
-theme.color.foreground = rgb (19,7,13)
+/theme:
+.color.background = rgb(19,7,13)
+.color.foreground = rgb(19,7,13)

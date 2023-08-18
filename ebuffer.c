@@ -33,9 +33,9 @@ typedef struct ebuffer_t
 /* I don't like this init function */
 void ebuffer_init(ebuffer_t *bfufer, char const *, cci64_t);
 
-char *ebuffer_rescom(ebuffer_t *,cci64_t reserve, cci64_t commit);
+char *ebuffer_manage(ebuffer_t *,cci64_t   resv, cci64_t   comm);
 char *ebuffer_insert(ebuffer_t *,cci64_t offset, cci64_t length);
-void ebuffer_delete(ebuffer_t *,cci64_t offset, cci64_t length);
+void  ebuffer_remove(ebuffer_t *,cci64_t offset, cci64_t length);
 
 /* implementation */
 void
@@ -48,7 +48,7 @@ ebuffer_init(
 
   if(length)
   {
-    ebuffer_rescom(buffer,length,length);
+    ebuffer_manage(buffer,length,length);
   }
 }
 
@@ -67,7 +67,7 @@ ebuffer_uninit(
 }
 
 char *
-ebuffer_rescom(
+ebuffer_manage(
   ebuffer_t *buffer, cci64_t reserve, cci64_t commit)
 {
   ccassert(commit <= reserve + buffer->extent - buffer->length);
@@ -94,7 +94,7 @@ char *
 ebuffer_insert(
   ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
-  ebuffer_rescom(buffer,length,length);
+  ebuffer_manage(buffer,length,length);
 
   if(offset != buffer->length)
   {
@@ -108,7 +108,7 @@ ebuffer_insert(
 }
 
 void
-ebuffer_delete(
+ebuffer_remove(
   ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
   if(offset != buffer->length)

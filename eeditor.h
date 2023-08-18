@@ -20,27 +20,38 @@
 */
 
 
-typedef struct ecursor_t
+enum
+{ kNONE,
+  kCHAR,
+  kUNDO,
+  kREDO, };
+
+typedef struct
 {
-  int      xchar;
-  int      yline;
-
-  /* there's no need to store this per cursor, is there? */
-  unsigned select: 1;
-  int      selmin;
-  int      selmax;
-
+  int       xchar;
+  int       yline;
 } ecursor_t;
 
-typedef struct erow_t
+typedef struct
+{
+  char      type;
+
+  struct
+  {
+    /* store a copy of the cursor in case we have to restore it */
+    ecursor_t cursor;
+    int       length; }; /* optional */
+} eevent_t;
+
+typedef struct
 {
   int offset;
   int length;
   /* remove */
   int indent;
-} erow_t;
+} ecurrow_t;
 
-typedef struct eeditor_t
+typedef struct
 {
   ewidget_t  widget;
 
@@ -48,9 +59,20 @@ typedef struct eeditor_t
 
   ecursor_t *cursor;/* todo */
 
+  /* todo: we can do better */
+  float     *curinf;
+
   ebuffer_t  buffer;
   int        lyview;
-  erow_t    *lcache;
+  ecurrow_t *lcache;
+
+  efont      font;
+
+  float      tab_size_in_spaces;
+
+  double     last_event_timer;
+  eevent_t * trail;
+  eevent_t   event;
 
   /* todo: this is temporary */
   struct
@@ -89,12 +111,9 @@ eaddcur(
 void
 esetcur(
   eeditor_t *, int, ecursor_t cur);
-void
-esetcurx(
-  eeditor_t *, int, int xchar);
-void
-esetcury(
-  eeditor_t *, int, int yline);
+/* todo: somewhat deprecated, if anything you should get a pointer to signify
+ that this is an integral part of the editor, in which case cursors should be
+ memory-locked */
 ecursor_t
 egetcur(
   eeditor_t *, int);
@@ -120,30 +139,21 @@ ecurrec(
     erect_t);
 
 /* buffer */
-erow_t
+ecurrow_t
 egetrow(
   eeditor_t *, int line);
 int
 egetlen(
   eeditor_t *, int line);
 int
-egetoff(
+erowloc(
   eeditor_t *, int line);
 
 char *
 egetptr(
   eeditor_t *, int index);
-char *
-egetend(
-  eeditor_t *);
 
 /* commands */
-void
-emovcurx(
-  eeditor_t *,int index, int mov);
-void
-emovcury(
-  eeditor_t *,int index, int mov);
 
 int
 eputchar(
@@ -168,5 +178,21 @@ int
 eeditor_unload(
   eeditor_t *, char const *);
 
+eevent_t
+epopevn(
+  eeditor_t *wdg)
+{
+  eevent_t evn = wdg->event;
 
+  wdg->event.type = kNONE;
 
+  if(earray_length(wdg->trail) != 0)
+  {
+    wdg->event = ccarrend(wdg->trail)[-1];
+
+    /* todo: don't actually do this */
+    earray_remove(wdg->trail,ccarrlen(wdg->trail)-1,1);
+  }
+
+  return evn;
+}
