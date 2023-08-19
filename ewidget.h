@@ -30,7 +30,6 @@ typedef struct ewidget_t
 #define BACKGROUND_COLOR RX_RGBA_UNORM(0x12,0x12,0x12,0xff)
 #define RECT_HUGE RX_TLIT(erect_t){0,0,0xffff,0xffff}
 
-
 int cursor_in_rect(erect_t rect)
 {
   return

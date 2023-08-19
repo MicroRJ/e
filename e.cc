@@ -26,6 +26,9 @@
 # define _RX_REFRESH_RATE          30
 #include "rx\\rx.c"
 
+#define FONTSTASH_IMPLEMENTATION
+#include "fontstash.h"
+
 void
 draw_box_sdf(
   rxvec2_t center, rxvec2_t radius, rxcolor_t color, float roundness, float softness );
@@ -44,6 +47,33 @@ draw_box_sdf(
 #include "eeditor.c"
 #include "econfig.c"
 
+FONScontext* fsContext;
+
+void* userPtr;
+int __renderCreate(void* uptr, int width, int height)
+{
+  return 1;
+}
+int __renderResize(void* uptr, int width, int height)
+{
+  return 1;
+}
+void __renderUpdate(void* uptr, int* rect, const unsigned char* data)
+{
+  void const *memory = fonsGetTextureData(fsContext,NULL,NULL);
+
+  rxborrowed_t borrow = rxtexture_borrow(atlas);
+  memcpy(borrow.memory,(void*)memory,atlas.size_x*atlas.size_y);
+  rxreturn(borrow);
+}
+
+void __renderDraw(void* uptr, const float* verts, const float* tcoords, const unsigned int* colors, int nverts)
+{
+}
+void __renderDelete(void* uptr)
+{
+}
+
 int main(int argc, char **argv)
 {
   rxinit(L"e");
@@ -52,15 +82,56 @@ int main(int argc, char **argv)
   ZeroMemory(&editor,sizeof(editor));
   esyntax_init(&editor.syntax);
   eaddcur(&editor,(ecursor_t){0,0});
-  editor.font = efont_load("C:\\Windows\\Fonts\\cascadiamono.ttf",32);
+  editor.font = efont_load("C:\\Windows\\Fonts\\cascadiamono.ttf",64);
+  editor.text_size = 64;
 
   eeditor_load(&editor,"todo.txt");
   editor.widget.focused = TRUE;
 
   int debug_overlay = FALSE;
 
+  FONSparams params;
+  ZeroMemory(&params,sizeof(params));
+  params.renderCreate = __renderCreate;
+  params.renderResize = __renderResize;
+  params.renderUpdate = __renderUpdate;
+  params.renderDraw = __renderDraw;
+  params.renderDelete = __renderDelete;
+  params.width = 512;
+  params.height = 512;
+  params.flags = FONS_ZERO_BOTTOMLEFT;
+
+  atlas = rxtexture_create(params.width,params.height,rxRGB8);
+
+  fsContext = fonsCreateInternal(&params);
+  if (!fsContext)
+  {
+      // Handle initialization error
+  }
+
+  int fontNormal = fonsAddFont(fsContext,"cascadia_mono",editor.font.fpath);
+  if (fontNormal == FONS_INVALID)
+  {
+    // Handle font loading error
+    ccbreak();
+  }
+
+  fonsClearState(fsContext);
+  fonsSetFont(fsContext,fontNormal);
+  fonsSetSize(fsContext,64);
+  // fonsSetBlur(fsContext, 10.0f);
+
+
+  // fonsDrawText(fsContext,0,0,"the motherfucking bitch in this house get the fuck out, moma's dead and the fucking next",NULL);
+
+
+
+
   do
   {
+
+
+#if 1
     if(rxtstkey(rx_kKEY_F5))
     {
       RunCommandString("build.msvc.template.bat e TRUE");
@@ -98,12 +169,18 @@ int main(int argc, char **argv)
       erect_t r = get_window_client_rect();
 
       /* draw the background */
-      draw_rect(r,RX_RGBA_UNORM(19, 7, 13,255));
+      draw_rect(r,RX_RGBA_UNORM(8,36,36,255));
+
+      if(ewdg(r,&editor))
+      {
+      }
 
       for(int i=0; i<1; i+=1)
       {
-        erect_t f = rect_cut(&r,RECT_kTOP,editor.font.vsize);
-        edraw_text(editor.font,f.x0,f.y0,-1,
+        erect_t f = rect_cut(&r,RECT_kBOT,editor.font.vsize);
+        draw_rect(f, RX_RGBA_UNORM(122,104,81,255));
+        edraw_text(editor.font,32.,RX_RGBA_UNORM(8,36,36,255),
+          f.x0,f.y0,-1,
           ccformat("%i,%i (%f)px %s (%i/%i)",
             egetcurx(&editor,0),
             egetcury(&editor,0), egetinf(&editor,0),
@@ -112,27 +189,28 @@ int main(int argc, char **argv)
                 editor.buffer.extent));
       }
 
-      if(ewdg(r,&editor))
-      {
-      }
-
       if(debug_overlay)
       {
-        draw_rect(
-          erect_xywh(0,0,
-            editor.font.atlas.size_x,
-            editor.font.atlas.size_y),
-              RX_COLOR_BLACK);
+        // draw_rect(
+        //   erect_xywh(0,0,
+        //     atlas.size_x,
+        //     atlas.size_y),
+        //       RX_COLOR_BLACK);
+        // rximp_apply();
+        // rxpipset_texture(REG_PS_TEX_0,atlas);
+        // rxpipset_sampler(REG_PS_SAM_0,rx.point_sampler);
+        // rxadd_rec4_col(RX_COLOR_WHITE,
+        //   0,0,
+        //   atlas.size_x,
+        //   atlas.size_y, 0,0,1,1);
+
         rximp_apply();
-        rxpip_regset_texture(REG_PS_TEX_0,editor.font.atlas);
-        rxpip_regset_sampler(REG_PS_SAM_0,rx.point_sampler);
-        rxadd_rec4_col(RX_COLOR_WHITE,
-          0,0,
-          editor.font.atlas.size_x,
-          editor.font.atlas.size_y, 0,0,1,1);
+          draw_text2(fsContext,0,0,strlen("Hello, Sailor!"),"Hello, Sailor!");
       }
 
     }
+#endif
+
     /* todo: this is something that rx should do intrinsically */
     Sleep(8);
 

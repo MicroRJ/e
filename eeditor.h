@@ -67,6 +67,7 @@ typedef struct
   ecurrow_t *lcache;
 
   efont      font;
+  float      text_size;
 
   float      tab_size_in_spaces;
 
