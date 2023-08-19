@@ -47,33 +47,6 @@ draw_box_sdf(
 #include "eeditor.c"
 #include "econfig.c"
 
-FONScontext* fsContext;
-
-void* userPtr;
-int __renderCreate(void* uptr, int width, int height)
-{
-  return 1;
-}
-int __renderResize(void* uptr, int width, int height)
-{
-  return 1;
-}
-void __renderUpdate(void* uptr, int* rect, const unsigned char* data)
-{
-  void const *memory = fonsGetTextureData(fsContext,NULL,NULL);
-
-  rxborrowed_t borrow = rxtexture_borrow(atlas);
-  memcpy(borrow.memory,(void*)memory,atlas.size_x*atlas.size_y);
-  rxreturn(borrow);
-}
-
-void __renderDraw(void* uptr, const float* verts, const float* tcoords, const unsigned int* colors, int nverts)
-{
-}
-void __renderDelete(void* uptr)
-{
-}
-
 int main(int argc, char **argv)
 {
   rxinit(L"e");
@@ -82,55 +55,22 @@ int main(int argc, char **argv)
   ZeroMemory(&editor,sizeof(editor));
   esyntax_init(&editor.syntax);
   eaddcur(&editor,(ecursor_t){0,0});
-  editor.font = efont_load("C:\\Windows\\Fonts\\cascadiamono.ttf",64);
+  editor.font = efont_load("assets\\DroidSerif-Italic.ttf",64);
   editor.text_size = 64;
-
   eeditor_load(&editor,"todo.txt");
   editor.widget.focused = TRUE;
 
-  int debug_overlay = FALSE;
-
-  FONSparams params;
-  ZeroMemory(&params,sizeof(params));
-  params.renderCreate = __renderCreate;
-  params.renderResize = __renderResize;
-  params.renderUpdate = __renderUpdate;
-  params.renderDraw = __renderDraw;
-  params.renderDelete = __renderDelete;
-  params.width = 512;
-  params.height = 512;
-  params.flags = FONS_ZERO_BOTTOMLEFT;
-
-  atlas = rxtexture_create(params.width,params.height,rxRGB8);
-
-  fsContext = fonsCreateInternal(&params);
-  if (!fsContext)
-  {
-      // Handle initialization error
-  }
-
-  int fontNormal = fonsAddFont(fsContext,"cascadia_mono",editor.font.fpath);
-  if (fontNormal == FONS_INVALID)
-  {
-    // Handle font loading error
-    ccbreak();
-  }
-
-  fonsClearState(fsContext);
-  fonsSetFont(fsContext,fontNormal);
-  fonsSetSize(fsContext,64);
-  // fonsSetBlur(fsContext, 10.0f);
+  Glyph_Font glyphFont = Load_Glyph_Font(editor.font.fpath,128);
+  Glyph_Data glyphData = glyphFont.glyphData['A'-32];
+  rxtexture_t glyphTexture =
+    rxtexture_create_ex(glyphData.imageWidth,glyphData.imageHeight,rxRGB8,
+      glyphData.imageWidth,glyphData.imageData);
 
 
-  // fonsDrawText(fsContext,0,0,"the motherfucking bitch in this house get the fuck out, moma's dead and the fucking next",NULL);
-
-
-
+  int debug_overlay = 0;
 
   do
   {
-
-
 #if 1
     if(rxtstkey(rx_kKEY_F5))
     {
@@ -191,21 +131,19 @@ int main(int argc, char **argv)
 
       if(debug_overlay)
       {
-        // draw_rect(
-        //   erect_xywh(0,0,
-        //     atlas.size_x,
-        //     atlas.size_y),
-        //       RX_COLOR_BLACK);
-        // rximp_apply();
-        // rxpipset_texture(REG_PS_TEX_0,atlas);
-        // rxpipset_sampler(REG_PS_SAM_0,rx.point_sampler);
-        // rxadd_rec4_col(RX_COLOR_WHITE,
-        //   0,0,
-        //   atlas.size_x,
-        //   atlas.size_y, 0,0,1,1);
+        int zoom = 2;
+        draw_rect(
+          erect_xywh(0,0,
+            glyphTexture.size_x * zoom,
+            glyphTexture.size_y * zoom),RX_COLOR_BLACK);
 
         rximp_apply();
-          draw_text2(fsContext,0,0,strlen("Hello, Sailor!"),"Hello, Sailor!");
+        rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
+        rxpipset_texture(REG_PS_TEX_0,glyphTexture);
+        rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
+        rxadd_rec4_col(RX_COLOR_WHITE,
+          0,0,glyphTexture.size_x * zoom,
+              glyphTexture.size_y * zoom, 0,0,1,1);
       }
 
     }

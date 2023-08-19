@@ -1,14 +1,18 @@
 
-----------
-0123456789
-
 The quick brown fox jumps over
 the lazy sheep.
 
+ TIMENTE MORTEM, OMNIA TIMEO
 
-  *-------------------------*
-  TIMENTE MORTEM, OMNIA TIMEO
-  *-------------------------*
+- Add Support for kerning and better
+ text-rendering function for better
+ alignment.
+
+- Figure out what approach we want
+to take for better and higher quality
+text rendering.
+- Look into Stb's text edit for better
+ text buffer editing.
 
 Welcome to 'e' the totally unfinished and barebones
 text editor. (Use 'e' at your own risk)

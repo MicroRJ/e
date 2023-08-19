@@ -21,6 +21,113 @@
 
 /* fonts api only supports ascii characters at the moment */
 
+
+void *Load_File_Data(char const *, size_t *);
+
+typedef struct
+{
+  int codepoint;
+  int imageWidth;
+  int imageHeight;
+  char *imageData;
+  float offsetX;
+  float offsetY;
+  float advanceWidth;
+} Glyph_Data;
+
+typedef struct
+{
+  char const *filePath;
+  Glyph_Data *glyphData;
+  float height;
+  /* should probably round these :todo */
+  float ascent;
+  float descent;
+  float lineGap;
+} Glyph_Font;
+
+void *Load_File_Data(char const *filePath, size_t *lpSize)
+{
+  void *file = ccopenfile(filePath,"r");
+  ccu32_t length = 0;
+  void *memory = ccpullfile(file,0,&length);
+
+  if(lpSize) *lpSize = length;
+  return memory;
+}
+
+Glyph_Font
+Load_Glyph_Font(
+  char const *filePath, float fontHeight)
+{
+
+#ifndef FONT_SDF_CHAR_PADDING
+#define FONT_SDF_CHAR_PADDING         4
+# endif
+#ifndef FONT_SDF_ON_EDGE_VALUE
+#define FONT_SDF_ON_EDGE_VALUE        128
+# endif
+#ifndef FONT_SDF_PIXEL_DIST_SCALE
+#define FONT_SDF_PIXEL_DIST_SCALE     64.
+# endif
+#ifndef FONT_BITMAP_ALPHA_THRESHOLD
+#define FONT_BITMAP_ALPHA_THRESHOLD   80
+# endif
+
+  size_t fileLength;
+  void *fileMemory = Load_File_Data(filePath,&fileLength);
+
+  stbtt_fontinfo fontInfo;
+  stbtt_InitFont(&fontInfo,fileMemory,0);
+
+  int ascent,descent,lineGap;
+  stbtt_GetFontVMetrics(&fontInfo,&ascent,&descent,&lineGap);
+
+  float scaleFactor = stbtt_ScaleForPixelHeight(&fontInfo,fontHeight);
+
+  Glyph_Data *glyphArray = NULL;
+
+  int glyphStart = 32;
+  int glyphCount = 96;
+  int codepoint;
+  for ( codepoint  = glyphStart;
+        codepoint  < glyphStart + glyphCount;
+        codepoint += 1 )
+  {
+    Glyph_Data *glyph = earray_add(glyphArray,1);
+
+    int advanceWidth;
+    int leftSideBearing;
+    stbtt_GetCodepointHMetrics(&fontInfo,codepoint,&advanceWidth,&leftSideBearing);
+
+    int imageWidth,imageHeight;
+    int offsetX,offsetY;
+    void *imageData;
+
+    imageData = stbtt_GetCodepointSDF(&fontInfo,scaleFactor,codepoint,
+        FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
+          &imageWidth,&imageHeight,&offsetX,&offsetY);
+
+    glyph->codepoint = codepoint;
+    glyph->advanceWidth = advanceWidth*scaleFactor;
+    glyph->offsetX = offsetX;
+    glyph->offsetY = offsetY + ascent*scaleFactor;
+    glyph->imageWidth = imageWidth;
+    glyph->imageHeight = imageHeight;
+    glyph->imageData = imageData;
+  }
+
+  Glyph_Font font;
+  font.filePath = filePath;
+  font.glyphData = glyphArray;
+  font.height = fontHeight;
+  font.ascent = ascent * scaleFactor;
+  font.descent = descent * scaleFactor;
+  font.lineGap = lineGap * scaleFactor;
+
+  return font;
+}
+
 typedef struct
 {
   char const      *fpath;
@@ -203,93 +310,3 @@ edraw_text(
   }
 }
 
-typedef FONScontext Font_Library;
-typedef FONSstate   Font_Varying;
-
-rxtexture_t atlas;
-
-float
-draw_text2(
-  Font_Library *stash,
-    float x, float y, int length, char const* str)
-{
-  /* wtf just pass this in to the function itself */
-  Font_Varying *state = fons__getState(stash);
-
-  unsigned int codepoint;
-  unsigned int utf8state = 0;
-  FONSglyph* glyph = NULL;
-  FONSquad q;
-  int prevGlyphIndex = -1;
-  short isize = (short)(state->size*10.0f);
-  short iblur = (short)state->blur;
-  float scale;
-  FONSfont* font;
-  float width;
-
-  char const *end = str + length;
-
-  if (stash == NULL) return x;
-  if (state->font < 0 || state->font >= stash->nfonts) return x;
-
-
-  font = stash->fonts[state->font];
-  if (font->data == NULL) return x;
-
-  scale = fons__tt_getPixelHeightScale(&font->font, (float)isize/10.0f);
-
-  if (end == NULL)
-    end = str + strlen(str);
-
-  // Align horizontally
-  if (state->align & FONS_ALIGN_LEFT) {
-    // empty
-  } else if (state->align & FONS_ALIGN_RIGHT) {
-    width = fonsTextBounds(stash, x,y, str, end, NULL);
-    x -= width;
-  } else if (state->align & FONS_ALIGN_CENTER) {
-    width = fonsTextBounds(stash, x,y, str, end, NULL);
-    x -= width * 0.5f;
-  }
-  // Align vertically.
-  y += fons__getVertAlign(stash, font, state->align, isize);
-
-  rximp_apply();
-  rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
-  rxpipset_texture(REG_PS_TEX_0,atlas);
-  rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
-
-  for (; str != end; ++str) {
-    if (fons__decutf8(&utf8state, &codepoint, *(const unsigned char*)str))
-      continue;
-    glyph = fons__getGlyph(stash, font, codepoint, isize, iblur);
-    if (glyph != NULL) {
-      fons__flush(stash);
-
-
-      fons__getQuad(stash, font, prevGlyphIndex, glyph, scale, state->spacing, &x, &y, &q);
-
-      rxbgn();
-        rx.imp.attr.rgba = RX_COLOR_WHITE;
-        rxaddvtx(rxvtx_xyuv(q.x0, q.y0, q.s0, q.t0));
-        rxaddvtx(rxvtx_xyuv(q.x1, q.y1, q.s1, q.t1));
-        rxaddvtx(rxvtx_xyuv(q.x1, q.y0, q.s1, q.t0));
-        rxaddvtx(rxvtx_xyuv(q.x0, q.y0, q.s0, q.t0));
-        rxaddvtx(rxvtx_xyuv(q.x0, q.y1, q.s0, q.t1));
-        rxaddvtx(rxvtx_xyuv(q.x1, q.y1, q.s1, q.t1));
-
-        rxaddnidx(6, 0,1,2, 3,4,5);
-
-        // rxaddvtx(rxvtx_xyuv(q.x0,q.y0,q.s0,q.t1));
-        // rxaddvtx(rxvtx_xyuv(q.x0,q.y1,q.s0,q.t0));
-        // rxaddvtx(rxvtx_xyuv(q.x1,q.y1,q.s1,q.t0));
-        // rxaddvtx(rxvtx_xyuv(q.x1,q.y0,q.s1,q.t1));
-        // rxaddnidx(6, 0,1,2, 0,2,3);
-      rxend();
-
-    }
-    prevGlyphIndex = glyph != NULL ? glyph->index : -1;
-  }
-
-  return x;
-}
