@@ -318,16 +318,19 @@ ecurrec(
   ecursor_t cur = egetcur(wdg,index);
   ecurrow_t row = egetrow(wdg,cur.yline);
 
-  /* todo: I'd probably want to support having different sized lines */
-  float y = (cur.yline - wdg->lyview) * wdg->font.vline;
-  float x = row.indent * 16 * 2 +
-    egetinf(wdg,index) + efont_code_xoff(wdg->font,ecurchr(wdg,index,0));
+  int cur_offset = ecurchr(wdg,index,0);
 
+  /* #todo I'd probably want to support having different sized lines */
+  float y = (cur.yline - wdg->lyview) * wdg->font.lineHeight;
 
+  float x = egetinf(wdg,index);
+
+  /* #todo */
   int cur_xsize = rxmaxi(
     efont_code_width(wdg->font,'.'),
-    efont_code_width(wdg->font,ecurchr(wdg,index,0)));
-  int cur_ysize = wdg->font.vsize;
+    efont_code_width(wdg->font,cur_offset));
+
+  int cur_ysize = wdg->font.lineHeight;
 
   y += cur_ysize * .2;
 
@@ -391,6 +394,48 @@ eaddchr_(
   wdg->event.length += length;
 }
 
+enum
+{
+  EDITOR_kHIT_CONTROL,
+  EDITOR_kHIT_SHIFT,
+  EDITOR_kHIT_ALT,
+
+  EDITOR_kTOGGLE_INSERT,
+
+  EDITOR_kMOVE_LEFT,
+  EDITOR_kMOVE_UP,
+  EDITOR_kMOVE_RIGHT,
+  EDITOR_kMOVE_DOWN,
+
+  EDITOR_kMOVE_WORD_LEFT,
+  EDITOR_kMOVE_WORD_RIGHT,
+
+  EDITOR_kMOVE_LINE_LEFT,
+  EDITOR_kMOVE_LINE_RIGHT,
+
+  EDITOR_kMOVE_PAGE_START,
+  EDITOR_kMOVE_PAGE_END,
+
+  EDITOR_kDELETE_BACK,
+  EDITOR_kDELETE_HERE,
+
+  EDITOR_kCUT,
+  EDITOR_kCOPY,
+  EDITOR_kPASTE,
+
+  EDITOR_kLINE,
+  EDITOR_kCHAR,
+};
+
+void
+ekey(
+  eeditor_t *wdg, int key)
+{
+  switch(key)
+  {
+  }
+}
+
 int
 eaddchr(
   eeditor_t *wdg, int cursor, int chr)
@@ -452,30 +497,7 @@ void
 enewline(
   eeditor_t *editor, int index)
 {
-  int num = 1;
 
-  if(ecurchr(editor,index,-1) == '{')
-  {
-    num += 1;
-  }
-
-  char *ptr;
-  ptr = ebuffer_insert(&editor->buffer,ecurloc(editor,index),num*2);
-
-  while(num -- != 0)
-  { /* proper line end feed */
-    ptr[num*2+0] = '\r';
-    ptr[num*2+1] = '\n';
-  }
-
-  // eaddrow(editor,egetcury(editor,index),num);
-
-  /* remove */
-  erecache(editor);
-
-  eaddchr_(editor,index,num*2);
-  emovcury(editor,index,    1);
-  esetcurx(editor,index,    0);
 }
 
 /* delete the character or characters at the cursor's position */

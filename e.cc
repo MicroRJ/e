@@ -26,8 +26,8 @@
 # define _RX_REFRESH_RATE          30
 #include "rx\\rx.c"
 
-#define FONTSTASH_IMPLEMENTATION
-#include "fontstash.h"
+// #define FONTSTASH_IMPLEMENTATION
+// #include "fontstash.h"
 
 void
 draw_box_sdf(
@@ -38,6 +38,7 @@ draw_box_sdf(
 #include "estring.c"
 #include "ebuffer.c"
 #include  "earray.c"
+#include   "efont.h"
 #include   "efont.c"
 #include "esyntax.h"
 #include "ewidget.h"
@@ -55,17 +56,12 @@ int main(int argc, char **argv)
   ZeroMemory(&editor,sizeof(editor));
   esyntax_init(&editor.syntax);
   eaddcur(&editor,(ecursor_t){0,0});
-  editor.font = efont_load("assets\\DroidSerif-Italic.ttf",64);
-  editor.text_size = 64;
+  editor.font = Load_Glyph_Font("assets\\Hack\\Hack_v3_003\\Hack-BoldItalic.ttf",32.);
+  editor.text_size = 32;
   eeditor_load(&editor,"todo.txt");
   editor.widget.focused = TRUE;
 
-  Glyph_Font glyphFont = Load_Glyph_Font(editor.font.fpath,128);
-  Glyph_Data glyphData = glyphFont.glyphData['A'-32];
-  rxtexture_t glyphTexture =
-    rxtexture_create_ex(glyphData.imageWidth,glyphData.imageHeight,rxRGB8,
-      glyphData.imageWidth,glyphData.imageData);
-
+  rxtexture_t glyphTexture = editor.font.glyphAtlas;
 
   int debug_overlay = 0;
 
@@ -85,15 +81,17 @@ int main(int argc, char **argv)
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_UP))
     {
-      efont new_font = efont_load(editor.font.fpath,editor.font.vsize+2);
+      efont new_font = efont_load(editor.font.filePath,editor.font.height+2);
       efont_free(editor.font);
       editor.font = new_font;
+      editor.text_size = editor.font.height;
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_DOWN))
     {
-      efont new_font = efont_load(editor.font.fpath,editor.font.vsize-2);
+      efont new_font = efont_load(editor.font.filePath,editor.font.height-2);
       efont_free(editor.font);
       editor.font = new_font;
+      editor.text_size = editor.font.height;
     } else
     if(rxisctrl() && rxtstkey('P'))
     { // cmd.widget.focused = !cmd.widget.focused;
@@ -117,7 +115,7 @@ int main(int argc, char **argv)
 
       for(int i=0; i<1; i+=1)
       {
-        erect_t f = rect_cut(&r,RECT_kBOT,editor.font.vsize);
+        erect_t f = rect_cut(&r,RECT_kBOT,editor.font.height);
         draw_rect(f, RX_RGBA_UNORM(122,104,81,255));
         edraw_text(editor.font,32.,RX_RGBA_UNORM(8,36,36,255),
           f.x0,f.y0,-1,
@@ -131,19 +129,31 @@ int main(int argc, char **argv)
 
       if(debug_overlay)
       {
-        int zoom = 2;
+        ccglobal float zoom = 100.;
+
+        if(rxtstkey(rx_kKEY_UP))
+        {
+          zoom += 4;
+        } else
+        if(rxtstkey(rx_kKEY_DOWN))
+        {
+          zoom -= 4;
+        }
+
+        float zzz = zoom / 100.;
+
         draw_rect(
           erect_xywh(0,0,
-            glyphTexture.size_x * zoom,
-            glyphTexture.size_y * zoom),RX_COLOR_BLACK);
+            glyphTexture.size_x * zzz,
+            glyphTexture.size_y * zzz),RX_COLOR_BLACK);
 
         rximp_apply();
-        rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
+        rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl);
         rxpipset_texture(REG_PS_TEX_0,glyphTexture);
-        rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
+        rxpipset_sampler(REG_PS_SAM_0,rx.point_sampler);
         rxadd_rec4_col(RX_COLOR_WHITE,
-          0,0,glyphTexture.size_x * zoom,
-              glyphTexture.size_y * zoom, 0,0,1,1);
+          0,0,glyphTexture.size_x * zzz,
+              glyphTexture.size_y * zzz, 0,0,1,1);
       }
 
     }

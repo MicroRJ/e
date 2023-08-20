@@ -48,15 +48,6 @@ int is_click_enter_rect(erect_t rect)
   return IS_CLICK_ENTER(0) && cursor_in_rect(rect);
 }
 
-erect_t
-text_rect(int x0, int y0, int height, const char *string)
-{
-  erect_t result =
-    erect_xywh(x0,y0,rxdraw_text_length(height,string),height);
-
-  return result;
-}
-
 void
 draw_rect(erect_t rect, rxcolor_t color)
 {
@@ -64,12 +55,6 @@ draw_rect(erect_t rect, rxcolor_t color)
     rect.x0, rect.y0,
     (rect.x1 - rect.x0),
     (rect.y1 - rect.y0));
-}
-
-void
-draw_text(erect_t rect, const char *text, int size, rxcolor_t color)
-{
-  rxdraw_text_ex(color,rect.x0,rect.y0,size,strlen(text),text);
 }
 
 void

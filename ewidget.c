@@ -79,7 +79,7 @@ ewdg(erect_t rect, eeditor_t *widget)
 #else
     edraw_text(widget->font,widget->text_size,RX_RGBA_UNORM(122,104,81,255),
       rect.x0 + line->indent * 16 * 2,
-      rect.y1 +        - widget->font.vline * (1 + i),
+      rect.y1 - widget->font.lineHeight * (1 + i),
         line->length,widget->buffer.memory + line->offset);
 #endif
   }

@@ -19,34 +19,10 @@
 **
 */
 
-/* fonts api only supports ascii characters at the moment */
+/* dynamic glyph allocator #todo */
 
-
-void *Load_File_Data(char const *, size_t *);
-
-typedef struct
-{
-  int codepoint;
-  int imageWidth;
-  int imageHeight;
-  char *imageData;
-  float offsetX;
-  float offsetY;
-  float advanceWidth;
-} Glyph_Data;
-
-typedef struct
-{
-  char const *filePath;
-  Glyph_Data *glyphData;
-  float height;
-  /* should probably round these :todo */
-  float ascent;
-  float descent;
-  float lineGap;
-} Glyph_Font;
-
-void *Load_File_Data(char const *filePath, size_t *lpSize)
+void *
+Load_File_Data(char const *filePath, size_t *lpSize)
 {
   void *file = ccopenfile(filePath,"r");
   ccu32_t length = 0;
@@ -56,203 +32,41 @@ void *Load_File_Data(char const *filePath, size_t *lpSize)
   return memory;
 }
 
-Glyph_Font
-Load_Glyph_Font(
-  char const *filePath, float fontHeight)
+float
+Font_Add_Glyph(
+  efont font, int codepoint, float x0, float y0, rxcolor_t color)
 {
+  Glyph_Data d = font.glyphArray[codepoint - font.glyphCodeStart];
+  Glyph_Quad q = font.glyphQuads[codepoint - font.glyphCodeStart];
 
-#ifndef FONT_SDF_CHAR_PADDING
-#define FONT_SDF_CHAR_PADDING         4
-# endif
-#ifndef FONT_SDF_ON_EDGE_VALUE
-#define FONT_SDF_ON_EDGE_VALUE        128
-# endif
-#ifndef FONT_SDF_PIXEL_DIST_SCALE
-#define FONT_SDF_PIXEL_DIST_SCALE     64.
-# endif
-#ifndef FONT_BITMAP_ALPHA_THRESHOLD
-#define FONT_BITMAP_ALPHA_THRESHOLD   80
-# endif
-
-  size_t fileLength;
-  void *fileMemory = Load_File_Data(filePath,&fileLength);
-
-  stbtt_fontinfo fontInfo;
-  stbtt_InitFont(&fontInfo,fileMemory,0);
-
-  int ascent,descent,lineGap;
-  stbtt_GetFontVMetrics(&fontInfo,&ascent,&descent,&lineGap);
-
-  float scaleFactor = stbtt_ScaleForPixelHeight(&fontInfo,fontHeight);
-
-  Glyph_Data *glyphArray = NULL;
-
-  int glyphStart = 32;
-  int glyphCount = 96;
-  int codepoint;
-  for ( codepoint  = glyphStart;
-        codepoint  < glyphStart + glyphCount;
-        codepoint += 1 )
+  /* some fonts support the whitespace char other not, either way
+   is safer to just early out #todo */
+  if( (codepoint ==  ' ') ||
+      (codepoint == '\t') ||
+      (codepoint == '\r') ||
+      (codepoint == '\n') )
   {
-    Glyph_Data *glyph = earray_add(glyphArray,1);
-
-    int advanceWidth;
-    int leftSideBearing;
-    stbtt_GetCodepointHMetrics(&fontInfo,codepoint,&advanceWidth,&leftSideBearing);
-
-    int imageWidth,imageHeight;
-    int offsetX,offsetY;
-    void *imageData;
-
-    imageData = stbtt_GetCodepointSDF(&fontInfo,scaleFactor,codepoint,
-        FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
-          &imageWidth,&imageHeight,&offsetX,&offsetY);
-
-    glyph->codepoint = codepoint;
-    glyph->advanceWidth = advanceWidth*scaleFactor;
-    glyph->offsetX = offsetX;
-    glyph->offsetY = offsetY + ascent*scaleFactor;
-    glyph->imageWidth = imageWidth;
-    glyph->imageHeight = imageHeight;
-    glyph->imageData = imageData;
+    goto leave;
   }
 
-  Glyph_Font font;
-  font.filePath = filePath;
-  font.glyphData = glyphArray;
-  font.height = fontHeight;
-  font.ascent = ascent * scaleFactor;
-  font.descent = descent * scaleFactor;
-  font.lineGap = lineGap * scaleFactor;
+  x0 += d.offsetX;
+  y0 += d.offsetY;
 
-  return font;
+  float x1 = x0 + d.imageWidth;
+  float y1 = y0 + d.imageHeight;
+
+  rximp_begin();
+    rx.imp.attr.rgba = color;
+    rxaddvtx(rxvtx_xyuv(x0,y0,q.x0,q.y1));
+    rxaddvtx(rxvtx_xyuv(x0,y1,q.x0,q.y0));
+    rxaddvtx(rxvtx_xyuv(x1,y1,q.x1,q.y0));
+    rxaddvtx(rxvtx_xyuv(x1,y0,q.x1,q.y1));
+    rxaddnidx(6, 0,1,2, 0,2,3);
+  rximp_end();
+
+leave:
+  return d.advanceWidth;
 }
-
-typedef struct
-{
-  char const      *fpath;
-
-  rxtexture_t      atlas;
-  stbtt_bakedchar *array;
-
-  float            vsize;
-  int              vline;
-} efont;
-
-efont
-efont_load(const char *, float);
-
-void
-efont_free(efont font);
-
-/* todo: support for kerning */
-ccinle float
-efont_code_xadv(
-  efont font, int code)
-{
-  if(code < 32)
-  {
-    return 0;
-  }
-
-  stbtt_bakedchar c = font.array[code - 32];
-  return c.xadvance;
-}
-
-ccinle float
-efont_code_xoff(
-  efont font, int code)
-{
-  if(code < 32)
-  {
-    return 0;
-  }
-
-  stbtt_bakedchar c = font.array[code - 32];
-  int round_x = STBTT_ifloor(c.xoff + .5);
-  return round_x;
-}
-
-ccinle float
-efont_code_width(
-  efont font, int code)
-{
-  if(code < 32)
-  {
-    return 0;
-  }
-
-  stbtt_bakedchar c = font.array[code - 32];
-
-  int round_x = STBTT_ifloor(c.xoff + .5);
-  return round_x + c.x1 - c.x0;
-}
-
-void
-efont_free(efont font)
-{
-  ccfree(font.array);
-  rxtexture_delete(font.atlas);
-}
-
-efont
-efont_load(const char *fpath, float vsize)
-{
-  void *file = ccopenfile(fpath,"r");
-
-  ccu32_t length = 0;
-  unsigned char *memory = ccpullfile(file,0,&length);
-
-  rxtexture_t atlas = rxtexture_create(1024,512,rxRGB8);
-  rxborrowed_t borrow = rxtexture_borrow(atlas);
-
-  stbtt_bakedchar *array = ccmalloc(sizeof(stbtt_bakedchar) * 0x80);
-  stbtt_BakeFontBitmap(memory,0,vsize,borrow.memory,atlas.size_x,atlas.size_y,32,96,array);
-
-  ccclosefile(file);
-  rxreturn(borrow);
-  ccfree(memory);
-
-  efont font;
-  font.fpath = fpath;
-  font.vsize = vsize;
-  font.vline = vsize;
-  font.atlas = atlas;
-  font.array = array;
-
-  return font;
-}
-
-
-
-void
-efont_get_quad(
-  efont font, float vsize,
-    stbtt_aligned_quad *q, int index,
-      float *xpos, float *ypos )
-{
-  float subpixel_bias = -.5;
-
-  float scale = vsize / font.vsize;
-
-  stbtt_bakedchar *b = font.array + index;
-
-  q->x0 = subpixel_bias + STBTT_ifloor((*xpos + b->xoff * scale) + .5);
-  q->y0 = subpixel_bias + STBTT_ifloor((*ypos + b->yoff * scale) + .5);
-
-  q->x1 = q->x0 + (b->x1 - b->x0) * scale;
-  q->y1 = q->y0 + (b->y1 - b->y0) * scale;
-
-  float ipw = 1. / font.atlas.size_x;
-  float iph = 1. / font.atlas.size_y;
-  q->s0 = b->x0 * ipw;
-  q->t0 = b->y0 * iph;
-  q->s1 = b->x1 * ipw;
-  q->t1 = b->y1 * iph;
-
-  *xpos += b->xadvance * scale;
-}
-
 
 /* todo: this has to become more advanced */
 void
@@ -270,11 +84,9 @@ edraw_text(
     return;
   }
 
-  float scale = vsize / font.vsize;
-
   rximp_apply();
   rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
-  rxpipset_texture(REG_PS_TEX_0,font.atlas);
+  rxpipset_texture(REG_PS_TEX_0,font.glyphAtlas);
   rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
 
   for(int i=0;i<length;i+=1)
@@ -284,29 +96,193 @@ edraw_text(
     if(code < 32)
       continue;
 
-    stbtt_bakedchar c = font.array[code-32];
-
-    stbtt_aligned_quad q;
-    efont_get_quad(font,vsize,&q,code-32,&x,&y);
-
-    float yyy = q.y1 - q.y0;
-    float xxx = q.x1 - q.x0;
-
-    q.y0 -= 2*c.yoff*scale + yyy;
-    q.y1 -= 2*c.yoff*scale + yyy;
-
-    q.x1 = q.x0 + xxx;
-    q.y1 = q.y0 + yyy;
-
-    rxbgn();
-      rx.imp.attr.rgba = color;
-      rxaddvtx(rxvtx_xyuv(q.x0,q.y0,q.s0,q.t1));
-      rxaddvtx(rxvtx_xyuv(q.x0,q.y1,q.s0,q.t0));
-      rxaddvtx(rxvtx_xyuv(q.x1,q.y1,q.s1,q.t0));
-      rxaddvtx(rxvtx_xyuv(q.x1,q.y0,q.s1,q.t1));
-      rxaddnidx(6, 0,1,2, 0,2,3);
-    rxend();
-
+    x += Font_Add_Glyph(font,code,x,y,color);
   }
 }
 
+
+Glyph_Font
+Load_Glyph_Font(
+  char const *filePath, float fontHeight)
+{
+
+#ifndef FONT_SDF_CHAR_PADDING
+#define FONT_SDF_CHAR_PADDING         16
+# endif
+#ifndef FONT_SDF_ON_EDGE_VALUE
+#define FONT_SDF_ON_EDGE_VALUE        128
+# endif
+#ifndef FONT_SDF_PIXEL_DIST_SCALE
+#define FONT_SDF_PIXEL_DIST_SCALE     128.
+# endif
+
+  size_t fileLength;
+  void *fileMemory = Load_File_Data(filePath,&fileLength);
+
+  stbtt_fontinfo fontInfo;
+  stbtt_InitFont(&fontInfo,fileMemory,0);
+
+  float scaleFactor = stbtt_ScaleForPixelHeight(&fontInfo,fontHeight);
+
+  int ascent,descent,lineGap;
+  stbtt_GetFontVMetrics(&fontInfo,&ascent,&descent,&lineGap);
+  float lineHeight = (ascent - descent + lineGap) * scaleFactor;
+
+  int atlasWidth  = 1024;
+  int atlasHeight = 1024;
+
+  int tallestGlyph = 0;
+
+  /* generate the atlas, should let the user pick the size since it is
+    used for caching #todo, though you shouldn't worry too much about
+    the initial size, this changes dynamically anyways, glyphs are baked in and out fifo style */
+  Glyph_Data *glyphArray = NULL;
+  Glyph_Quad *glyphQuads = NULL;
+
+  rxtexture_t glyphAtlas = rxtexture_create(atlasWidth,atlasHeight,rxRGB8);
+  rxborrowed_t atlasMemory = rxtexture_borrow(glyphAtlas);
+
+  int atlasY = 0, atlasX = 0;
+
+  int glyphStart = 32;
+  int glyphEnd   = 126;
+  int codepoint;
+  for ( codepoint  = glyphStart;
+        codepoint  < glyphEnd;    codepoint += 1 )
+  {
+    /* we have to add the glyph even if the character is invisible #todo */
+    Glyph_Data *data = earray_add(glyphArray,1);
+    Glyph_Quad *quad = earray_add(glyphQuads,1);
+
+    int advanceWidth = 0;
+    int leftSideBearing = 0;
+    stbtt_GetCodepointHMetrics(&fontInfo,codepoint,&advanceWidth,&leftSideBearing);
+
+    int imageWidth = advanceWidth * scaleFactor;
+    int imageHeight = fontHeight;
+    unsigned char *imageData = NULL;
+    int offsetX = 0;
+    int offsetY = 0;
+
+    /* check for all the other invisible characters too #todo,
+      especially once the user is allowed to specify the range */
+    if(codepoint != ' ')
+    {
+      imageData = stbtt_GetCodepointSDF(&fontInfo,scaleFactor,codepoint,
+          FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
+            &imageWidth,&imageHeight,&offsetX,&offsetY);
+
+    }
+
+    if(imageHeight > tallestGlyph)
+    {
+      tallestGlyph = imageHeight;
+    }
+
+    if(atlasX + imageWidth > atlasWidth)
+    {
+      atlasX = 0;
+      atlasY += tallestGlyph; /* #todo */
+    }
+
+    quad->codepoint = codepoint;
+    quad->x0 = atlasX / (float)atlasWidth;
+    quad->y0 = atlasY / (float)atlasHeight;
+    quad->x1 = (atlasX + imageWidth) / (float)atlasWidth;
+    quad->y1 = (atlasY + imageHeight) / (float)atlasHeight;
+    data->codepoint = codepoint;
+    data->advanceWidth = advanceWidth*scaleFactor;
+    data->offsetX = offsetX;
+    data->offsetY = (lineHeight - imageHeight - offsetY)  - lineHeight;
+    data->imageWidth = imageWidth;
+    data->imageHeight = imageHeight;
+    data->imageData = imageData;
+
+    if(imageData != NULL)
+    {
+      for (int imageY = 0; imageY < imageHeight; imageY += 1)
+      {
+        memcpy(
+          atlasMemory.cursor +
+          atlasMemory.stride * (imageY + atlasY) + atlasX,
+          imageData  +
+          imageWidth * imageY, imageWidth);
+      }
+
+      atlasX += imageWidth;
+    }
+  }
+
+  rxreturn(atlasMemory);
+
+  Glyph_Font font;
+  font.filePath = filePath;
+  font.glyphCodeStart = glyphStart;
+  font.glyphCodeEnd = glyphEnd;
+  font.glyphAtlas = glyphAtlas;
+  font.glyphArray = glyphArray;
+  font.glyphQuads = glyphQuads;
+  font.ascent = ascent * scaleFactor;
+  font.descent = descent * scaleFactor;
+  font.lineGap = lineGap * scaleFactor;
+  font.lineHeight = lineHeight;
+  font.height = fontHeight;
+
+  return font;
+}
+
+
+efont
+efont_load(const char *, float);
+
+void
+efont_free(efont font);
+
+/* todo: support for kerning */
+ccinle float
+efont_code_xadv(
+  efont font, int code)
+{
+  if(code < 32)
+  {
+    return 0;
+  }
+
+  return font.glyphArray[code - 32].advanceWidth;
+}
+
+ccinle float
+efont_code_xoff(
+  efont font, int code)
+{
+  if(code < 32)
+  {
+    return 0;
+  }
+
+  return font.glyphArray[code - 32].offsetX;
+}
+
+ccinle float
+efont_code_width(
+  efont font, int code)
+{
+  if(code < 32)
+  {
+    return 0;
+  }
+  return font.glyphArray[code - 32].advanceWidth;
+}
+
+void
+efont_free(efont font)
+{
+  // ccfree(font.array);
+  // rxtexture_delete(font.atlas);
+}
+
+efont
+efont_load(const char *fpath, float vsize)
+{
+  return Load_Glyph_Font(fpath,vsize);
+}
