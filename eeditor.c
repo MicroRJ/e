@@ -94,100 +94,11 @@ eaddcur(
   return efndcur(editor,cur.xchar,cur.yline);
 }
 
-void
-erecache(
-  eeditor_t *widget)
-{
-
-  int   length = widget->buffer.length;
-  char *buffer = widget->buffer.memory;
-  char *cursor = buffer;
-
-  /* todo */
-  ccarrdel(widget->lcache);
-  widget->lcache = 0;
-
-  int indent = 0;
-  for(;;)
-  {
-    ecurrow_t *line = ccarradd(widget->lcache,1);
-    line->offset = (cursor - buffer);
-    line->indent = indent;
-
-    while((cursor < buffer + length) &&
-          (*cursor != '\r') &&
-          (*cursor != '\n'))
-    {
-      /* probably integrate this better */
-      if(*cursor == '{')
-      {
-        line->indent = indent;
-        indent += 1;
-      } else
-      if(*cursor == '}')
-      {
-        indent -= 1;
-        line->indent = indent;
-      }
-
-      cursor += 1;
-    }
-
-    line->length = (cursor - buffer) - line->offset;
-
-    if(cursor < buffer + length)
-    {
-      cursor += ((cursor[0] == '\r') &&
-                 (cursor[1] == '\n'))  ? 2 : 1;
-    } else
-    {
-      break;
-    }
-  }
-
-  ccassert(cursor == buffer + length);
-}
-
-
-/* get line at index */
-ccinle ecurrow_t
-egetrow(
-  eeditor_t *wdg, int index)
-{
-  /* remove, this should not happen? */
-  if(wdg->lcache == ccnull)
-  {
-    ecurrow_t row;
-    row.indent = 0;
-    row.length = 0;
-    row.offset = 0;
-    return row;
-  }
-
-  return wdg->lcache[index];
-}
-
-ccinle int
-erowlen(
-  eeditor_t *wdg, int index)
-{
-  return egetrow(wdg,index).length;
-}
-
-ccinle int
-egetloc2(
-  eeditor_t *wdg, int xchar, int yline)
-{
-  return egetrow(wdg,yline).offset + xchar;
-}
-
 ccinle int
 ecurloc(
-  eeditor_t *editor, int index)
+  eeditor_t *wdg, int index)
 {
-  return egetloc2(editor,
-            egetcurx(editor,index),
-            egetcury(editor,index));
+  return ebuffer_get_line_offset(&wdg->buffer,egetcury(wdg,index)) + egetcurx(wdg,index);
 }
 
 ccinle char *
@@ -207,16 +118,16 @@ egetptr(eeditor_t *wdg, int index)
 }
 
 ccinle char
-egetchr(eeditor_t *wdg, int index)
+egetchr(eeditor_t *wdg, int offset)
 {
-  return *egetptr(wdg,index);
+  return *egetptr(wdg,offset);
 }
 
 ccinle char *
 egetptr2(
   eeditor_t *wdg, int xchar, int yline)
 {
-  return egetptr(wdg,egetloc2(wdg,xchar,yline));
+  return egetptr(wdg,ebuffer_get_line_offset(&wdg->buffer,yline)+xchar);
 }
 
 ccinle float
@@ -254,8 +165,10 @@ esetcur(
   eeditor_t *editor, int index, ecursor_t cur)
 {
   /* ensure the cursor is never out of bounds */
-  cur.yline = rxclamp(cur.yline,0,ccarrlen(editor->lcache)-1);
-  cur.xchar = rxclamp(cur.xchar,0,erowlen(editor,cur.yline));
+  cur.yline = rxclamp(cur.yline,0,
+    ccarrlen(editor->buffer.lcache)-1);
+  cur.xchar = rxclamp(cur.xchar,0,
+    ebuffer_get_line_length(&editor->buffer,cur.yline));
 
   ecursor_t old = egetcur(editor,index);
 
@@ -316,7 +229,7 @@ ecurrec(
   eeditor_t *wdg, int index, erect_t rect)
 {
   ecursor_t cur = egetcur(wdg,index);
-  ecurrow_t row = egetrow(wdg,cur.yline);
+  emarker_t row = ebuffer_get_line_marker(&wdg->buffer,cur.yline);
 
   int cur_offset = ecurchr(wdg,index,0);
 
@@ -343,8 +256,8 @@ emovcurx(
 {
   ecursor_t cur = egetcur(editor,cursor);
 
-  if(cur.xchar + mov > erowlen(editor,cur.yline))
-  { if(cur.yline + 1 <= ccarrlen(editor->lcache) - 1)
+  if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline))
+  { if(cur.yline + 1 <= ccarrlen(editor->buffer.lcache) - 1)
     { cur.yline += 1;
       cur.xchar  = 0;
     }
@@ -352,7 +265,7 @@ emovcurx(
   if(cur.xchar + mov < 0)
   { if(cur.yline - 1 >= 0)
     { cur.yline -= 1;
-      cur.xchar  = erowlen(editor,cur.yline);
+      cur.xchar  = ebuffer_get_line_length(&editor->buffer,cur.yline);
     }
   } else
   {
@@ -380,12 +293,12 @@ eaddchr_(
   // if(cur.event.type != kCHAR)
   {
     /* if there's no event do not store */
-    if(wdg->event.type != kNONE)
+    if(wdg->event.type != EDITOR_kNONE)
     {
       *ccarradd(wdg->trail,1) = wdg->event;
     }
 
-    wdg->event.type   = kCHAR;
+    wdg->event.type   = EDITOR_kCHAR;
     wdg->event.cursor = egetcur(wdg,cursor);
     wdg->event.length = 0;
 
@@ -394,136 +307,181 @@ eaddchr_(
   wdg->event.length += length;
 }
 
-enum
-{
-  EDITOR_kHIT_CONTROL,
-  EDITOR_kHIT_SHIFT,
-  EDITOR_kHIT_ALT,
-
-  EDITOR_kTOGGLE_INSERT,
-
-  EDITOR_kMOVE_LEFT,
-  EDITOR_kMOVE_UP,
-  EDITOR_kMOVE_RIGHT,
-  EDITOR_kMOVE_DOWN,
-
-  EDITOR_kMOVE_WORD_LEFT,
-  EDITOR_kMOVE_WORD_RIGHT,
-
-  EDITOR_kMOVE_LINE_LEFT,
-  EDITOR_kMOVE_LINE_RIGHT,
-
-  EDITOR_kMOVE_PAGE_START,
-  EDITOR_kMOVE_PAGE_END,
-
-  EDITOR_kDELETE_BACK,
-  EDITOR_kDELETE_HERE,
-
-  EDITOR_kCUT,
-  EDITOR_kCOPY,
-  EDITOR_kPASTE,
-
-  EDITOR_kLINE,
-  EDITOR_kCHAR,
-};
 
 void
-ekey(
-  eeditor_t *wdg, int key)
+ekey_one(
+  eeditor_t *wdg, int key, int num, int chr, int cur);
+
+void
+ekey_all(
+  eeditor_t *wdg, int key, int num, int chr)
 {
+  for(int cur=ecurnum(wdg)-1; cur>=0; cur-=1)
+  {
+    ekey_one(wdg,key,num,chr,cur);
+  }
+}
+
+void
+ekey_one(
+  eeditor_t *wdg, int key, int num, int chr, int cur)
+{
+  ecursor_t cursor = egetcur(wdg,cur);
+  int off = ecurloc(wdg,cur);
+  int dir = 0;
   switch(key)
-  {
+  { case EDITOR_kMOD_CONTROL:
+    { wdg->is_control = chr != 0;
+    } break;
+    case EDITOR_kMOD_SHIFT:
+    { wdg->is_shift = chr != 0;
+    } break;
+    case EDITOR_kMOD_ALT:
+    { wdg->is_alt = chr != 0;
+    } break;
+    case EDITOR_kMOD_INSERT:
+    { wdg->is_insert = chr != 0;
+    } break;
+    case EDITOR_kMOVE_LEFT:
+    case EDITOR_kMOVE_RIGHT:
+    {
+      dir = +1;
+
+      if(key == EDITOR_kMOVE_LEFT)
+      {
+        off += (dir = -1);
+      }
+
+      if(wdg->is_control)
+      {
+        if(IS_WORD_DELIMETER(egetchr(wdg,off)))
+        { while(egetchr(wdg,off)!=0 && IS_WORD_DELIMETER(egetchr(wdg,off)))
+          {
+            emovcurx(wdg,cur,dir); off += dir;
+          }
+        } else
+        { while(egetchr(wdg,off)!=0 && !IS_WORD_DELIMETER(egetchr(wdg,off)))
+          {
+            emovcurx(wdg,cur,dir); off += dir;
+          }
+        }
+      } else
+      {
+        emovcurx(wdg,cur,dir);
+      }
+    } break;
+    case EDITOR_kMOVE_LINE_RIGHT:
+    {
+      esetcurx(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
+    } break;
+    case EDITOR_kMOVE_LINE_LEFT:
+    {
+      esetcurx(wdg,cur,0);
+    } break;
+    case EDITOR_kDELETE_BACK:
+      off += (dir = - 1);
+    /* fall-through */
+    case EDITOR_kDELETE_HERE:
+    if( off >= 0 && off + num <= wdg->buffer.length)
+    {
+      char *ptr = egetptr(wdg,off);
+
+      /* delete the entire line feed, as supposed to just breaking it */
+      if((ptr[0 + dir] == '\r') &&
+         (ptr[1 + dir] == '\n'))
+      {
+        off += dir;
+        num += 1;
+      }
+
+      /* gotta move the cursor first */
+      emovcurx(wdg,cur,dir*num);
+
+      ebuffer_remove(&wdg->buffer,off,num);
+      ebuffer_update_lcache(&wdg->buffer);
+    } break;
+    case EDITOR_kCHAR:
+    {
+      /* we can handle this properly instead #todo */
+      ccassert(
+        chr != '\r' &&
+        chr != '\n' );
+
+      int mov = 1;
+      int end = 0;
+
+      if(chr >= 0x80)
+      { chr = '?';
+        end =   0;
+        mov =   1;
+      } else
+      /* this should be based on the user's setttings, whether the user
+        wants to convert tabs to spaces #todo*/
+      if(chr == '\t')
+      { chr = ' ';
+        end = ' ';
+        mov =   2;
+      } else
+      /* remove these syntax sensitive controls from here #todo */
+      switch(chr)
+      {
+        case '{': end = '}'; break;
+        case '[': end = ']'; break;
+        case '(': end = ')'; break;
+        /* if the cursor is already hovering over any of these
+         and the user types one of them, simply move the cursor to the right */
+        case '}':
+        case ']':
+        case ')':
+        if(egetchr(wdg,off) == chr)
+        {
+          mov = 1;
+          chr = 0;
+          end = 0;
+        } break;
+      }
+
+      if(chr != 0)
+      {
+        num = end!=0?2:1;
+
+        char *ptr = ebuffer_insert(&wdg->buffer,off,num);
+        ptr[0] = chr;
+
+        if(end != 0)
+          ptr[1] = end;
+
+        /* notify of the event and then move the index */
+        eaddchr_(wdg,off,num);
+        ebuffer_update_lcache(&wdg->buffer);
+      }
+
+      emovcurx(wdg,cur,mov);
+    } break;
+    case EDITOR_kLINE:
+    {
+      /* this is syntax specific #todo */
+      if(egetchr(wdg,off-1) == '{')
+        num += 1;
+
+      char *ptr = ebuffer_insert(&wdg->buffer,off,num*2);
+
+      /* proper line end feed #todo */
+      while(num -- != 0)
+      {
+        ptr[num*2+0] = '\r';
+        ptr[num*2+1] = '\n';
+      }
+
+      // eaddrow(wdg,egetcury(wdg,index),num);
+
+      eaddchr_(wdg,cur,num*2);
+      emovcury(wdg,cur,    1);
+      esetcurx(wdg,cur,    0);
+
+      ebuffer_update_lcache(&wdg->buffer);
+    } break;
   }
-}
-
-int
-eaddchr(
-  eeditor_t *wdg, int cursor, int chr)
-{
-  ccassert(
-    chr != '\r' &&
-    chr != '\n' );
-
-  int mov = 1;
-  int end = 0;
-
-  /* todo: remove these syntax sensitive controls from here */
-  if(chr >= 0x80)
-  {
-    chr = '?';
-    end =   0;
-    mov =   1;
-  } else
-  if(chr == '\t')
-  {
-    chr = ' ';
-    end = ' ';
-    mov =   2;
-  } else
-  switch(chr)
-  {
-    case '{': end = '}'; break;
-    case '[': end = ']'; break;
-    case '(': end = ')'; break;
-    /* if the cursor is already hovering over any of these
-     and the user types one of them, simply move the cursor
-     to the right */
-    case '}':
-    case ']':
-    case ')':
-    if(ecurchr(wdg,cursor,0) == chr)
-      return mov;
-  }
-
-  int num = end!=0?2:1;
-
-  char *ptr = ebuffer_insert(&wdg->buffer,ecurloc(wdg,cursor),num);
-
-  ptr[0] = chr;
-
-  if(end != 0)
-    ptr[1] = end;
-
-  erecache(wdg);
-
-  /* notify of the event and then move the cursor */
-  eaddchr_(wdg,cursor,num);
-  emovcurx(wdg,cursor,num);
-
-  return mov;
-}
-
-void
-enewline(
-  eeditor_t *editor, int index)
-{
-
-}
-
-/* delete the character or characters at the cursor's position */
-void
-edelchr(
-  eeditor_t *wdg, int cursor, int length)
-{
-  int offset = ecurloc(wdg,cursor);
-
-  if( wdg->buffer.length < offset + length )
-  {
-    return;
-  }
-
-  char *ptr = egetptr(wdg,offset);
-
-  /* todo: instead just check if you're at the begging of a line in which case you just delete
-    it, the problem is that the user is expected to move the cursor beforehand, so
-    in which case it might by simpler to have two separate delete functions? */
-  if((ptr[0] == '\r') &&
-     (ptr[1] == '\n')) length += 2;
-
-  ebuffer_remove(&wdg->buffer,offset,length);
-
-  /* remove */
-  erecache(wdg);
 }
 
 void
@@ -543,7 +501,7 @@ eeditor_load(
 
       memcpy(editor->buffer.memory,memory,length);
 
-      erecache(editor);
+      ebuffer_update_lcache(&editor->buffer);
     }
   }
 }
@@ -581,19 +539,23 @@ eeditor_unload(
   return result;
 }
 
-
 void
 eeditor_msg(
   eeditor_t *editor)
 {
+  ekey_one(editor,EDITOR_kMOD_CONTROL,0,rxisctrl(),0);
+  ekey_one(editor,EDITOR_kMOD_ALT,0,rxismenu(),0);
+  ekey_one(editor,EDITOR_kMOD_SHIFT,0,rxisshft(),0);
+
   if(rxisctrl() && rxtstkey('Z'))
   {
     eevent_t event = epopevn(editor);
 
-    if(event.type == kCHAR)
+    if(event.type == EDITOR_kCHAR)
     {
-      esetcur(editor,0,event.cursor);
-      edelchr(editor,0,event.length);
+      // esetcur(editor,0,event.cursor);
+      // edelchr(editor,0,event.length);
+      ekey_one(editor,EDITOR_kDELETE_BACK,event.length,0,0);
     }
 
   } else
@@ -608,27 +570,22 @@ eeditor_msg(
   {
     /* scroll up */
     editor->lyview += rxisshft() ? 16 : - rx.wnd.in.mice.yscroll;
-    editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
+    editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
   } else
   if(rxtstkey(rx_kHOME))
   {
-    /* move to the start of the line */
-    for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      esetcurx(editor,i,0);
+    ekey_all(editor,EDITOR_kMOVE_LINE_LEFT,1,0);
 
   } else
   if(rxtstkey(rx_kEND))
   {
-    /* move to the end of the line */
-    for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      esetcurx(editor,i,erowlen(editor,egetcury(editor,i)));
-
+    ekey_all(editor,EDITOR_kMOVE_LINE_RIGHT,1,0);
   } else
   if(rxisctrl() && rxtstkey('X'))
   {
     for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
-      ecurrow_t row = egetrow(editor,egetcury(editor,i));
+      emarker_t row = ebuffer_get_line_marker(&editor->buffer,egetcury(editor,i));
 
       int num = 1;
 
@@ -637,7 +594,6 @@ eeditor_msg(
          (ptr[1]=='\n')) num += 1;
 
       ebuffer_remove(&editor->buffer,row.offset,row.length+num);
-      erecache(editor);
     }
 
   } else
@@ -653,7 +609,7 @@ eeditor_msg(
     {
       /* scroll up */
       editor->lyview -= rxisshft() ? 16 : 1;
-      editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
+      editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
       /* move to the line above */
@@ -673,7 +629,7 @@ eeditor_msg(
     {
       /* scroll down */
       editor->lyview += rxisshft() ? 16 : 1;
-      editor->lyview = rxclampi(editor->lyview,0,ccarrlen(editor->lcache)-1);
+      editor->lyview = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
       /* move to the line below */
@@ -682,170 +638,28 @@ eeditor_msg(
     }
   } else
   if(rxtstkey(rx_kKEY_LEFT))
-  { if(rxisctrl())
-    {
-      for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      {
-        if(is_word_delim(ecurchr(editor,i,-1)))
-        { while(ecurchr(editor,i,-1)!=0 && is_word_delim(ecurchr(editor,i,-1)))
-            emovcurx(editor,i,-1);
-        } else
-        { while(ecurchr(editor,i,-1)!=0 && !is_word_delim(ecurchr(editor,i,-1)))
-            emovcurx(editor,i,-1);
-        }
-      }
-    } else
-    {
-      for(int i=ecurnum(editor)-1;i>=0;i-=1)
-        emovcurx(editor,i,-1);
-    }
+  { ekey_all(editor,EDITOR_kMOVE_LEFT,   1,0);
   } else
   if(rxtstkey(rx_kKEY_RIGHT))
   {
-    if(rxisctrl())
-    {
-      for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      {
-        if(is_word_delim(ecurchr(editor,i,0)))
-        { while(ecurchr(editor,i,0)!=0 && is_word_delim(ecurchr(editor,i,0)))
-            emovcurx(editor,i,+1);
-        } else
-        { while(ecurchr(editor,i,0)!=0 && !is_word_delim(ecurchr(editor,i,0)))
-            emovcurx(editor,i,+1);
-        }
-      }
-    } else
-    {
-      for(int i=ecurnum(editor)-1;i>=0;i-=1)
-        emovcurx(editor,i,+1);
-    }
+    ekey_all(editor,EDITOR_kMOVE_RIGHT, 1,0);
   } else
   if(rxtstkey(rx_kDELETE))
-  {
-    for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      edelchr(editor,i,1);
-
+  { ekey_all(editor,EDITOR_kDELETE_HERE,1,0);
   } else
   if(rxtstkey(rx_kBCKSPC))
-  {
-    for(int i=ecurnum(editor)-1;i>=0;i-=1)
-    {
-      if(ecurloc(editor,i) != 0)
-      {
-        emovcurx(editor,i,-1);
-        edelchr(editor,i,1);
-      }
-    }
+  { ekey_all(editor,EDITOR_kDELETE_BACK,1,0);
   } else
   if(rxtstkey(rx_kRETURN))
   {
-    for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      enewline(editor,i);
+    ekey_all(editor,EDITOR_kLINE,1,0);
   } else
-  { if(rxisctrl())
+  { if(!rxisctrl())
     {
-
-    } else
-    {
-      for(int i=ecurnum(editor)-1;i>=0;i-=1)
-      { if(rxchr() != 0)
-        {
-          eaddchr(editor,i,rxchr());
-        }
+      if(rxchr() != 0)
+      {
+        ekey_all(editor,EDITOR_kCHAR,1,rxchr());
       }
     }
   }
 }
-
-int
-eeditor_draw_text_run_callback(
-  void *user, int index, int *code, rxcolor_t *color)
-{
-  eeditor_t *editor = user;
-
-  ecurrow_t line = egetrow(editor,editor->style.yline);
-
-  char *cursor = editor->buffer.memory;
-  cursor += line.offset;
-  cursor += index;
-
-  *code  = *cursor;
-  *color = editor->style.color;
-
-  /* silly */
-  if(editor->style.reach <= 0)
-  {
-    int token = esyntax_get_token_style(&editor->syntax,
-      (editor->buffer.length) - (cursor - editor->buffer.memory),cursor,
-        &editor->style.reach);
-
-    *color = RX_RGBA_UNORM(221,206,150,255);
-
-    switch(token)
-    {
-      case ETOKEN_kCOMMENT:
-      {
-        *color = RX_COLOR_SILVER;
-      } break;
-      case ETOKEN_kSTRING:
-      { *color = RX_COLOR_TEAL;
-      } break;
-      case ETOKEN_kINTEGER:
-      case ETOKEN_kFLOAT:
-      { *color = RX_COLOR_CYAN;
-      } break;
-      case ETOKEN_kIF:
-      case ETOKEN_kELSE:
-      case ETOKEN_kSWITCH:
-      case ETOKEN_kCASE:
-      case ETOKEN_kDEFAULT:
-      case ETOKEN_kFOR:
-      case ETOKEN_kWHILE:
-      case ETOKEN_kDO:
-      case ETOKEN_kGOTO:
-      case ETOKEN_kRETURN:
-      case ETOKEN_kBREAK:
-      case ETOKEN_kCONTINUE:
-      case ETOKEN_kVOID:
-      {
-        *color = RX_COLOR_RED;
-      } break;
-      case ETOKEN_kSTDC_INT:
-      case ETOKEN_kSTDC_LONG:
-      case ETOKEN_kSTDC_SHORT:
-      case ETOKEN_kSTDC_DOUBLE:
-      case ETOKEN_kSTDC_FLOAT:
-      case ETOKEN_kSTDC_CHAR:
-      case ETOKEN_kSTDC_BOOL:
-      case ETOKEN_kSTDC_SIGNED:
-      case ETOKEN_kSTDC_UNSIGNED:
-      case ETOKEN_kMSVC_INT8:
-      case ETOKEN_kMSVC_INT16:
-      case ETOKEN_kMSVC_INT32:
-      case ETOKEN_kMSVC_INT64:
-      case ETOKEN_kENUM:
-      case ETOKEN_kSTRUCT:
-
-      case ETOKEN_kTYPEDEF:
-      case ETOKEN_kAUTO:
-      case ETOKEN_kEXTERN:
-      case ETOKEN_kREGISTER:
-      case ETOKEN_kSTATIC:
-      case ETOKEN_kTHREAD_LOCAL:
-      case ETOKEN_kMSVC_DECLSPEC:
-      {
-        *color = RX_COLOR_MAGENTA;
-      } break;
-
-    }
-
-    editor->style.color = *color;
-  }
-
-  editor->style.reach -= 1;
-
-  return index < line.length;
-
-}
-
-

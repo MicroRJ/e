@@ -72,7 +72,9 @@ leave:
 void
 edraw_text(
   efont font, float vsize, rxcolor_t color,
-    float x, float y, int length, char const *string)
+    float x, float y, int length, char const *string,
+    		rxcolor_t     *color_table,
+    		unsigned char *color_array )
 {
   if(length == -1)
   {
@@ -95,6 +97,11 @@ edraw_text(
 
     if(code < 32)
       continue;
+
+    if(color_table != NULL)
+    {
+    	color = color_table[color_array[i]];
+    }
 
     x += Font_Add_Glyph(font,code,x,y,color);
   }

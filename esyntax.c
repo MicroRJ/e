@@ -19,113 +19,144 @@
 **
 */
 
-#define IS_LETTER(r)\
-  ( CCWITHIN(r,'a','z')|| \
-    CCWITHIN(r,'A','Z')|| \
-    CCWITHIN(r,'0','9')||(r)=='_' )
-
 void
-esyntax_include_token(esyntax_t *syntax, char const *name, int type)
+esyntax_init(esyntax_t *syntax)
 {
-  ccu64_t h=5381;
+	syntax->sampler = esyntax_sampler_default_impl;
 
-  int c,n;
-  for(n=0;c=name[n];++n)
-  { ccassert(IS_LETTER(c));
-    if(c!=0)
-      h=h<<5,h=h+c;
-    else
-      break;
-  }
+	for(int i=0; i<ccCarrlenL(syntax->color_table); i+=1)
+	{
+		syntax->color_table[i] = RX_RGBA_UNORM(122,104,81,255);
+	}
 
-  cctoken_t *entry=cctblputP(syntax->table,h);
-  entry->type=type;
-  entry->name=name;
-}
+  syntax->color_table[ETOKEN_kCOMMENT]       = RX_COLOR_SILVER;
 
+  syntax->color_table[ETOKEN_kSTRING]        = RX_COLOR_TEAL;
+  syntax->color_table[ETOKEN_kINTEGER]       = RX_COLOR_CYAN;
+  syntax->color_table[ETOKEN_kFLOAT]         = RX_COLOR_CYAN;
 
-void
-esyntax_init(esyntax_t *reader)
-{
+  syntax->color_table[ETOKEN_kIF]            = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kELSE]          = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kSWITCH]        = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kCASE]          = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kDEFAULT]       = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kFOR]           = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kWHILE]         = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kDO]            = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kGOTO]          = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kRETURN]        = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kBREAK]         = RX_COLOR_RED;
+  syntax->color_table[ETOKEN_kCONTINUE]      = RX_COLOR_RED;
+
+  syntax->color_table[ETOKEN_kVOID]          = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kCONST]         = RX_COLOR_MAGENTA;
+
+  syntax->color_table[ETOKEN_kSTDC_INT]      = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_LONG]     = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_SHORT]    = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_DOUBLE]   = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_FLOAT]    = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_CHAR]     = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_BOOL]     = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_SIGNED]   = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTDC_UNSIGNED] = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kMSVC_INT8]     = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kMSVC_INT16]    = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kMSVC_INT32]    = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kMSVC_INT64]    = RX_COLOR_MAGENTA;
+
+  syntax->color_table[ETOKEN_kENUM]          = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTRUCT]        = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kTYPEDEF]       = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kAUTO]          = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kEXTERN]        = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kREGISTER]      = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kSTATIC]        = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kTHREAD_LOCAL]  = RX_COLOR_MAGENTA;
+  syntax->color_table[ETOKEN_kMSVC_DECLSPEC] = RX_COLOR_MAGENTA;
+
 	/* these hashes will instead be auto-generated at compile-time, eventually */
-  esyntax_include_token(reader,"__asm",ETOKEN_kMSVC_ATTR_asm);
-  esyntax_include_token(reader,"__based",ETOKEN_kMSVC_ATTR_based);
-  esyntax_include_token(reader,"__cdecl",ETOKEN_kMSVC_ATTR_cdecl);
-  esyntax_include_token(reader,"__clrcall",ETOKEN_kMSVC_ATTR_clrcall);
-  esyntax_include_token(reader,"__fastcall",ETOKEN_kMSVC_ATTR_fastcall);
-  esyntax_include_token(reader,"__inline",ETOKEN_kMSVC_ATTR_inline);
-  esyntax_include_token(reader,"__stdcall",ETOKEN_kMSVC_ATTR_stdcall);
-  esyntax_include_token(reader,"__thiscall",ETOKEN_kMSVC_ATTR_thiscall);
-  esyntax_include_token(reader,"__vectorcal",ETOKEN_kMSVC_ATTR_vectorcal);
-
-  esyntax_include_token(reader,"_Alignof",ETOKEN_kALIGNOF);
-  esyntax_include_token(reader,"_Alignas",ETOKEN_kALIGNAS);
-
-  esyntax_include_token(reader,"const",ETOKEN_kCONST);
-  esyntax_include_token(reader,"restrict",ETOKEN_kRESTRICT);
-  esyntax_include_token(reader,"volatile",ETOKEN_kVOLATILE);
-
-  esyntax_include_token(reader,"inline",ETOKEN_kINLINE);
-  esyntax_include_token(reader,"_Noreturn",ETOKEN_kNO_RETURN);
-
-  esyntax_include_token(reader,"signed",ETOKEN_kSTDC_SIGNED);
-  esyntax_include_token(reader,"unsigned",ETOKEN_kSTDC_UNSIGNED);
-  esyntax_include_token(reader,"__int8",ETOKEN_kMSVC_INT8);
-  esyntax_include_token(reader,"__int16",ETOKEN_kMSVC_INT16);
-  esyntax_include_token(reader,"__int32",ETOKEN_kMSVC_INT32);
-  esyntax_include_token(reader,"__int64",ETOKEN_kMSVC_INT64);
-  esyntax_include_token(reader,"double",ETOKEN_kSTDC_DOUBLE);
-  esyntax_include_token(reader,"float",ETOKEN_kSTDC_FLOAT);
-  esyntax_include_token(reader,"long",ETOKEN_kSTDC_LONG);
-  esyntax_include_token(reader,"int",ETOKEN_kSTDC_INT);
-  esyntax_include_token(reader,"short",ETOKEN_kSTDC_SHORT);
-  esyntax_include_token(reader,"char",ETOKEN_kSTDC_CHAR);
-  esyntax_include_token(reader,"void",ETOKEN_kVOID);
-  esyntax_include_token(reader,"_Bool",ETOKEN_kSTDC_BOOL);
-
-  // esyntax_include_token(reader,"_Complex",ETOKEN_kcomplex);
-  // esyntax_include_token(reader,"_Atomic",ETOKEN_katomic);
-
-  esyntax_include_token(reader,"enum",ETOKEN_kENUM);
-  esyntax_include_token(reader,"struct",ETOKEN_kSTRUCT);
-
-  esyntax_include_token(reader,"typedef",ETOKEN_kTYPEDEF);
-
-  esyntax_include_token(reader,"sizeof",ETOKEN_kSIZEOF);
-
-  esyntax_include_token(reader,"auto",ETOKEN_kAUTO);
-  esyntax_include_token(reader,"extern",ETOKEN_kEXTERN);
-  esyntax_include_token(reader,"register",ETOKEN_kREGISTER);
-  esyntax_include_token(reader,"static",ETOKEN_kSTATIC);
-  esyntax_include_token(reader,"_Thread_local",ETOKEN_kTHREAD_LOCAL);
-  esyntax_include_token(reader,"__declspec",ETOKEN_kMSVC_DECLSPEC);
-
-  esyntax_include_token(reader,"if",ETOKEN_kIF);
-  esyntax_include_token(reader,"switch",ETOKEN_kSWITCH);
-  esyntax_include_token(reader,"else",ETOKEN_kELSE);
-  esyntax_include_token(reader,"case",ETOKEN_kCASE);
-  esyntax_include_token(reader,"default",ETOKEN_kDEFAULT);
-  esyntax_include_token(reader,"for",ETOKEN_kFOR);
-  esyntax_include_token(reader,"while",ETOKEN_kWHILE);
-  esyntax_include_token(reader,"do",ETOKEN_kDO);
-  esyntax_include_token(reader,"goto",ETOKEN_kGOTO);
-  esyntax_include_token(reader,"return",ETOKEN_kRETURN);
-  esyntax_include_token(reader,"break",ETOKEN_kBREAK);
-  esyntax_include_token(reader,"continue",ETOKEN_kCONTINUE);
+  esyntax_register_keyword(syntax,"__asm",         ETOKEN_kMSVC_ATTR_asm);
+  esyntax_register_keyword(syntax,"__based",       ETOKEN_kMSVC_ATTR_based);
+  esyntax_register_keyword(syntax,"__cdecl",       ETOKEN_kMSVC_ATTR_cdecl);
+  esyntax_register_keyword(syntax,"__clrcall",     ETOKEN_kMSVC_ATTR_clrcall);
+  esyntax_register_keyword(syntax,"__fastcall",    ETOKEN_kMSVC_ATTR_fastcall);
+  esyntax_register_keyword(syntax,"__inline",      ETOKEN_kMSVC_ATTR_inline);
+  esyntax_register_keyword(syntax,"__stdcall",     ETOKEN_kMSVC_ATTR_stdcall);
+  esyntax_register_keyword(syntax,"__thiscall",    ETOKEN_kMSVC_ATTR_thiscall);
+  esyntax_register_keyword(syntax,"__vectorcal",   ETOKEN_kMSVC_ATTR_vectorcal);
+  esyntax_register_keyword(syntax,"_Alignof",      ETOKEN_kALIGNOF);
+  esyntax_register_keyword(syntax,"_Alignas",      ETOKEN_kALIGNAS);
+  esyntax_register_keyword(syntax,"const",         ETOKEN_kCONST);
+  esyntax_register_keyword(syntax,"restrict",      ETOKEN_kRESTRICT);
+  esyntax_register_keyword(syntax,"volatile",      ETOKEN_kVOLATILE);
+  esyntax_register_keyword(syntax,"inline",        ETOKEN_kINLINE);
+  esyntax_register_keyword(syntax,"_Noreturn",     ETOKEN_kNO_RETURN);
+  esyntax_register_keyword(syntax,"signed",        ETOKEN_kSTDC_SIGNED);
+  esyntax_register_keyword(syntax,"unsigned",      ETOKEN_kSTDC_UNSIGNED);
+  esyntax_register_keyword(syntax,"__int8",        ETOKEN_kMSVC_INT8);
+  esyntax_register_keyword(syntax,"__int16",       ETOKEN_kMSVC_INT16);
+  esyntax_register_keyword(syntax,"__int32",       ETOKEN_kMSVC_INT32);
+  esyntax_register_keyword(syntax,"__int64",       ETOKEN_kMSVC_INT64);
+  esyntax_register_keyword(syntax,"double",        ETOKEN_kSTDC_DOUBLE);
+  esyntax_register_keyword(syntax,"float",         ETOKEN_kSTDC_FLOAT);
+  esyntax_register_keyword(syntax,"long",          ETOKEN_kSTDC_LONG);
+  esyntax_register_keyword(syntax,"int",           ETOKEN_kSTDC_INT);
+  esyntax_register_keyword(syntax,"short",         ETOKEN_kSTDC_SHORT);
+  esyntax_register_keyword(syntax,"char",          ETOKEN_kSTDC_CHAR);
+  esyntax_register_keyword(syntax,"void",          ETOKEN_kVOID);
+  esyntax_register_keyword(syntax,"_Bool",         ETOKEN_kSTDC_BOOL);
+  esyntax_register_keyword(syntax,"enum",          ETOKEN_kENUM);
+  esyntax_register_keyword(syntax,"struct",        ETOKEN_kSTRUCT);
+  esyntax_register_keyword(syntax,"typedef",       ETOKEN_kTYPEDEF);
+  esyntax_register_keyword(syntax,"sizeof",        ETOKEN_kSIZEOF);
+  esyntax_register_keyword(syntax,"auto",          ETOKEN_kAUTO);
+  esyntax_register_keyword(syntax,"extern",        ETOKEN_kEXTERN);
+  esyntax_register_keyword(syntax,"register",      ETOKEN_kREGISTER);
+  esyntax_register_keyword(syntax,"static",        ETOKEN_kSTATIC);
+  esyntax_register_keyword(syntax,"_Thread_local", ETOKEN_kTHREAD_LOCAL);
+  esyntax_register_keyword(syntax,"__declspec",    ETOKEN_kMSVC_DECLSPEC);
+  esyntax_register_keyword(syntax,"if",            ETOKEN_kIF);
+  esyntax_register_keyword(syntax,"switch",        ETOKEN_kSWITCH);
+  esyntax_register_keyword(syntax,"else",          ETOKEN_kELSE);
+  esyntax_register_keyword(syntax,"case",          ETOKEN_kCASE);
+  esyntax_register_keyword(syntax,"default",       ETOKEN_kDEFAULT);
+  esyntax_register_keyword(syntax,"for",           ETOKEN_kFOR);
+  esyntax_register_keyword(syntax,"while",         ETOKEN_kWHILE);
+  esyntax_register_keyword(syntax,"do",            ETOKEN_kDO);
+  esyntax_register_keyword(syntax,"goto",          ETOKEN_kGOTO);
+  esyntax_register_keyword(syntax,"return",        ETOKEN_kRETURN);
+  esyntax_register_keyword(syntax,"break",         ETOKEN_kBREAK);
+  esyntax_register_keyword(syntax,"continue",      ETOKEN_kCONTINUE);
 
   ccassert(ccerrnon());
 }
 
-int
-esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advance)
+esample_t
+esyntax_sampler_default_impl(
+  esyntax_t *syntax, void *_, int offset, int length, char const *string)
+{
+	esample_t sample;
+  esyntax_get_token_info(
+  	syntax,length,string,
+  		&sample.token,&sample.width);
+
+  return sample;
+}
+
+void
+esyntax_get_token_info(esyntax_t *l,
+	int length, char const *string, int *token, int *width)
 {
   int the_token = ETOKEN_kINVALID;
+  int the_width = 1;
 
   char const *cursor = string;
 
   if(length <= 0)
   {
     the_token = ETOKEN_kEND;
+    the_width = 0;
     goto leave;
   }
 
@@ -229,7 +260,7 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
         h  += *cursor ++;
       } while(IS_LETTER(*cursor));
 
-      cctoken_t *e=cctblsetP(l->table,h);
+      esyntax_keyword_t *e=cctblsetP(l->keyword,h);
 
       the_token = e->name ? e->type : ETOKEN_kIDENTIFIER;
     } break;
@@ -449,7 +480,7 @@ esyntax_get_token_style(esyntax_t *l, int length, char const *string, int *advan
 
 leave:;
 
-  *advance = cursor - string;
-  return the_token;
+  *width = the_width = cursor - string;
+  *token = the_token;
 }
 

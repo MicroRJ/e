@@ -19,31 +19,63 @@
 **
 */
 
-/* I think this is going to be largely temporary, I think for the most part
- this is going to be auto-generated, I would like to have a file where you
- describe the language and then generate a c executable (dll) that we can
- plugin even at runtime that does the work, instead of wasting time creating something
- incredibly repetitive and tiresome for each language, and you end up with something
- that could be re-used later, and if you want to create your own more efficient parser
- then we would allow for that too. */
-
-/* todo */
-typedef struct cctoken_t cctoken_t;
-typedef struct cctoken_t
+/* this isn't syntax specific, it is meant to be common */
+typedef struct
 {
   int         type;
   char const *name;
-} cctoken_t;
+} esyntax_keyword_t;
+
+typedef struct esyntax_t esyntax_t;
+
+typedef struct
+{
+	int token;
+	int width;
+} esample_t;
+
+typedef esample_t esyntax_sampler(esyntax_t *, void *, int offset, int length, char const *string);
 
 typedef struct esyntax_t
 {
-  cctoken_t *table;
+	rxcolor_t          color_table[0x100];
+
+	esyntax_sampler    *sampler;
+  esyntax_keyword_t  *keyword;
 } esyntax_t;
 
-/* default tokens:  learn.microsoft.com/en-us/cpp/c-language/c-language-reference */
-typedef enum ETOKEN_k
+void esyntax_init(esyntax_t *);
+
+esample_t
+esyntax_sampler_default_impl(
+  esyntax_t *, void *_, int offset, int length, char const *string);
+
+void
+esyntax_get_token_info(
+	esyntax_t *l, int length, char const *string, int *token, int *width);
+
+void
+esyntax_register_keyword(esyntax_t *syntax, char const *name, int type)
 {
-  ETOKEN_kINVALID = 0,
+  ccu64_t h=5381;
+
+  int c,n;
+  for(n=0;c=name[n];++n)
+  { ccassert(IS_LETTER(c));
+    if(c!=0)
+      h=h<<5,h=h+c;
+    else
+      break;
+  }
+
+  esyntax_keyword_t *entry=cctblputP(syntax->keyword,h);
+  entry->type=type;
+  entry->name=name;
+}
+
+enum
+{ ETOKEN_kINVALID = 0,
+  ETOKEN_kNONE,
   ETOKEN_kEND    ,
   ETOKEN_kLPAREN , // '('
   ETOKEN_kRPAREN , // ')'
@@ -167,4 +199,6 @@ typedef enum ETOKEN_k
   ETOKEN_kSTATIC,
   ETOKEN_kTHREAD_LOCAL,  // _Thread_local
   ETOKEN_kSIZEOF,
-} ETOKEN_k;
+};
+
+

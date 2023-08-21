@@ -21,13 +21,13 @@
 # define _RX_STANDALONE
 # define _RX_NO_TRUNCATION_WARNING
 # define _RX_NO_CONVERSION_WARNING
-# define _RX_DEFAULT_WINDOW_SIZE_X 1080
+# define _RX_DEFAULT_WINDOW_SIZE_X 1080 + 256
 # define _RX_DEFAULT_WINDOW_SIZE_Y 720
 # define _RX_REFRESH_RATE          30
 #include "rx\\rx.c"
 
-// #define FONTSTASH_IMPLEMENTATION
-// #include "fontstash.h"
+#pragma warning(disable:4324)
+#include "meow_hash_x64_aesni.h"
 
 void
 draw_box_sdf(
@@ -35,12 +35,14 @@ draw_box_sdf(
 
 #include   "erect.c"
 #include "esystem.c"
-#include "estring.c"
-#include "ebuffer.c"
+#include "ememory.c"
 #include  "earray.c"
+#include "estring.c"
+#include "esyntax.h"
+#include "ebuffer.h"
+#include "ebuffer.c"
 #include   "efont.h"
 #include   "efont.c"
-#include "esyntax.h"
 #include "ewidget.h"
 #include "eeditor.h"
 #include "esyntax.c"
@@ -54,7 +56,7 @@ int main(int argc, char **argv)
 
   eeditor_t editor;
   ZeroMemory(&editor,sizeof(editor));
-  esyntax_init(&editor.syntax);
+
   eaddcur(&editor,(ecursor_t){0,0});
   editor.font = Load_Glyph_Font("assets\\Hack\\Hack_v3_003\\Hack-BoldItalic.ttf",32.);
   editor.text_size = 32;
@@ -119,12 +121,13 @@ int main(int argc, char **argv)
         draw_rect(f, RX_RGBA_UNORM(122,104,81,255));
         edraw_text(editor.font,32.,RX_RGBA_UNORM(8,36,36,255),
           f.x0,f.y0,-1,
-          ccformat("%i,%i (%f)px %s (%i/%i)",
+          ccformat("%i,%i %s (%i/%i) %s",
             egetcurx(&editor,0),
-            egetcury(&editor,0), egetinf(&editor,0),
+            egetcury(&editor,0),
               editor.buffer.tag,
                 editor.buffer.length,
-                editor.buffer.extent));
+                editor.buffer.extent,
+            ccfnames(editor.font.filePath)), NULL,NULL);
       }
 
       if(debug_overlay)

@@ -65,27 +65,17 @@ ewdg(erect_t rect, eeditor_t *widget)
     }
   }
 
-  memset(&widget->style,0,sizeof(widget->style));
-  for(int i=0; i<rxmini(ccarrlen(widget->lcache) - widget->lyview,24); i += 1)
+  for(int i=0; i<rxmini(earray_length(widget->buffer.lcache) - widget->lyview,24); i += 1)
   {
-    widget->style.yline = widget->lyview + i;
+    emarker_t *line = widget->buffer.lcache + widget->lyview + i;
 
-    ecurrow_t *line = widget->lcache + widget->lyview + i;
-
-#if 0
-    rxdraw_text_run(
-      rect.x0 + line->indent * 16 * 2,
-      rect.y1 +        - 32 * (1 + i),32,widget,eeditor_draw_text_run_callback);
-#else
     edraw_text(widget->font,widget->text_size,RX_RGBA_UNORM(122,104,81,255),
-      rect.x0 + line->indent * 16 * 2,
+      rect.x0,
       rect.y1 - widget->font.lineHeight * (1 + i),
-        line->length,widget->buffer.memory + line->offset);
-#endif
+        line->length,
+        	widget->buffer.memory + line->offset, widget->buffer.syntax.color_table,
+        	widget->buffer.colors + line->offset);
   }
-
-
-
 
   set_clip_rect(RECT_HUGE);
   return ccfalse;

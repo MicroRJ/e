@@ -19,17 +19,45 @@
 **
 */
 
-
 enum
-{ kNONE,
-  kCHAR,
-  kUNDO,
-  kREDO, };
+{
+  EDITOR_kNONE = 0,
+
+  EDITOR_kMOD_CONTROL,
+  EDITOR_kMOD_SHIFT,
+  EDITOR_kMOD_ALT,
+  EDITOR_kMOD_INSERT,
+
+  EDITOR_kMOVE_LEFT,
+  EDITOR_kMOVE_UP,
+  EDITOR_kMOVE_RIGHT,
+  EDITOR_kMOVE_DOWN,
+
+  EDITOR_kMOVE_WORD_LEFT,
+  EDITOR_kMOVE_WORD_RIGHT,
+
+  EDITOR_kMOVE_LINE_LEFT,
+  EDITOR_kMOVE_LINE_RIGHT,
+
+  EDITOR_kMOVE_PAGE_START,
+  EDITOR_kMOVE_PAGE_END,
+
+  EDITOR_kDELETE_BACK,
+  EDITOR_kDELETE_HERE,
+
+  EDITOR_kCUT,
+  EDITOR_kCOPY,
+  EDITOR_kPASTE,
+
+  EDITOR_kLINE,
+  EDITOR_kCHAR,
+};
 
 typedef struct
 {
-  int       xchar;
-  int       yline;
+  /* to be removed #todo */
+  int  xchar;
+  int  yline;
 } ecursor_t;
 
 typedef struct
@@ -43,19 +71,16 @@ typedef struct
     int       length; }; /* optional */
 } eevent_t;
 
-typedef struct
-{
-  int offset;
-  int length;
-  /* remove */
-  int indent;
-} ecurrow_t;
+
 
 typedef struct
 {
-  ewidget_t  widget;
+  ewidget_t  widget; /* #important must be first field */
 
-  esyntax_t  syntax;
+  unsigned is_control: 1;
+  unsigned is_insert:  1;
+  unsigned is_shift:   1;
+  unsigned is_alt:     1;
 
   ecursor_t *cursor;/* todo */
 
@@ -64,7 +89,6 @@ typedef struct
 
   ebuffer_t  buffer;
   int        lyview;
-  ecurrow_t *lcache;
 
   efont      font;
   float      text_size;
@@ -74,17 +98,6 @@ typedef struct
   double     last_event_timer;
   eevent_t * trail;
   eevent_t   event;
-
-  /* todo: this is temporary */
-  struct
-  {
-    /* the y index of the line we're on */
-    int       yline;
-    /* the current color of the token */
-    rxcolor_t color;
-    /* the remaining range of the current style */
-    int       reach;
-  } style;
 } eeditor_t;
 
 /* this is temporary */
@@ -96,11 +109,6 @@ eeditor_msg(
 int
 eeditor_draw_text_run_callback(
   void *user, int index, int *code, rxcolor_t *color);
-
-/* this is temporary */
-void
-erecache(
-  eeditor_t *);
 
 /* cursor */
 int
@@ -139,17 +147,6 @@ ecurrec(
   /* this is temporary, the widget should store this? */
     erect_t);
 
-/* buffer */
-ecurrow_t
-egetrow(
-  eeditor_t *, int line);
-int
-egetlen(
-  eeditor_t *, int line);
-int
-erowloc(
-  eeditor_t *, int line);
-
 char *
 egetptr(
   eeditor_t *, int index);
@@ -185,7 +182,7 @@ epopevn(
 {
   eevent_t evn = wdg->event;
 
-  wdg->event.type = kNONE;
+  wdg->event.type = EDITOR_kNONE;
 
   if(earray_length(wdg->trail) != 0)
   {

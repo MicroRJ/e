@@ -22,6 +22,8 @@
 #define earray_length(arr) ccarrlen(arr)
 #define earray_add(arr,num) ccarradd(arr,num)
 
+#define earray_delete(arr) ccarrdel(arr)
+
 #define earray_remove(arr,off,num) ((arr) + earray_remove_((void**)(&arr),sizeof(*arr),off,num))
 #define earray_insert(arr,off,num) ((arr) + earray_insert_((void**)(&arr),sizeof(*arr),off,num))
 

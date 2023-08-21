@@ -19,26 +19,11 @@
 **
 */
 
-int
-is_letter(char c)
-{
-  return
-  ( CCWITHIN(c,'a','z') ||
-    CCWITHIN(c,'A','Z') ||
-    CCWITHIN(c,'0','9') || (c) == '_' );
-}
+#define IS_LETTER(r) ( CCWITHIN(r,'a','z')|| \
+    									 CCWITHIN(r,'A','Z')|| \
+    									 CCWITHIN(r,'0','9')|| (r) == '_' )
 
-int
-is_word_delim(char c)
-{
-  return !is_letter(c);
-
-  /* todo */
-  return (c == ' ' )
-      || (c == '\t')
-      || (c == '\r')
-      || (c == '\n');
-}
+#define IS_WORD_DELIMETER(r) (!IS_LETTER(r))
 
 char *
 estring_copy_ex(
