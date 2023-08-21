@@ -119,15 +119,16 @@ int main(int argc, char **argv)
       {
         erect_t f = rect_cut(&r,RECT_kBOT,editor.font.height);
         draw_rect(f, RX_RGBA_UNORM(122,104,81,255));
-        edraw_text(editor.font,32.,RX_RGBA_UNORM(8,36,36,255),
-          f.x0,f.y0,-1,
-          ccformat("%i,%i %s (%i/%i) %s",
-            egetcurx(&editor,0),
-            egetcury(&editor,0),
-              editor.buffer.tag,
-                editor.buffer.length,
-                editor.buffer.extent,
-            ccfnames(editor.font.filePath)), NULL,NULL);
+
+        edraw_text_config_t config =
+				draw_text_config_init(editor.font,editor.text_size,
+					f.x0,f.y0,RX_RGBA_UNORM(8,36,36,255),NULL,NULL,-1,NULL);
+
+				config.string = ccformat("%i,%i %s (%i/%i) %s",
+					egetcurx(&editor,0),egetcury(&editor,0),
+            editor.buffer.tag,editor.buffer.length,editor.buffer.extent,ccfnames(editor.font.filePath));
+
+        edraw_text(&config);
       }
 
       if(debug_overlay)

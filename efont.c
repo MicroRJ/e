@@ -32,78 +32,101 @@ Load_File_Data(char const *filePath, size_t *lpSize)
   return memory;
 }
 
-float
-Font_Add_Glyph(
-  efont font, int codepoint, float x0, float y0, rxcolor_t color)
+edraw_text_config_t
+draw_text_config_init(
+	efont            font,
+	float            height,
+	float            x,
+	float            y,
+	rxcolor_t        color,
+	rxcolor_t     *  color_table,
+	unsigned char *  color_array,
+	int              length,
+	char const     * string )
 {
-  Glyph_Data d = font.glyphArray[codepoint - font.glyphCodeStart];
-  Glyph_Quad q = font.glyphQuads[codepoint - font.glyphCodeStart];
-
-  /* some fonts support the whitespace char other not, either way
-   is safer to just early out #todo */
-  if( (codepoint ==  ' ') ||
-      (codepoint == '\t') ||
-      (codepoint == '\r') ||
-      (codepoint == '\n') )
-  {
-    goto leave;
-  }
-
-  x0 += d.offsetX;
-  y0 += d.offsetY;
-
-  float x1 = x0 + d.imageWidth;
-  float y1 = y0 + d.imageHeight;
-
-  rximp_begin();
-    rx.imp.attr.rgba = color;
-    rxaddvtx(rxvtx_xyuv(x0,y0,q.x0,q.y1));
-    rxaddvtx(rxvtx_xyuv(x0,y1,q.x0,q.y0));
-    rxaddvtx(rxvtx_xyuv(x1,y1,q.x1,q.y0));
-    rxaddvtx(rxvtx_xyuv(x1,y0,q.x1,q.y1));
-    rxaddnidx(6, 0,1,2, 0,2,3);
-  rximp_end();
-
-leave:
-  return d.advanceWidth;
+	edraw_text_config_t config;
+	config.font        = font;
+	config.height      = height;
+	config.x           = x;
+	config.y           = y;
+	config.color       = color;
+	config.color_table = color_table;
+	config.color_array = color_array;
+	config.length      = length;
+	config.string      = string;
+	return config;
 }
 
-/* todo: this has to become more advanced */
+
 void
-edraw_text(
-  efont font, float vsize, rxcolor_t color,
-    float x, float y, int length, char const *string,
-    		rxcolor_t     *color_table,
-    		unsigned char *color_array )
+edraw_text( edraw_text_config_t *config );
+
+void
+edraw_text_easy( efont font, float height, rxcolor_t color,
+	float x, float y, int length, char const *string)
 {
-  if(length == -1)
+	edraw_text_config_t config =
+		draw_text_config_init(font,height,x,y,color,NULL,NULL,length,string);
+
+	edraw_text( &config );
+}
+
+void
+edraw_text( edraw_text_config_t *config )
+{
+  if(config->length == -1)
   {
-    length = strlen(string);
+    config->length = strlen(config->string);
   }
 
-  if(length == 0)
+  if(config->length == 0)
   {
     return;
   }
 
   rximp_apply();
   rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
-  rxpipset_texture(REG_PS_TEX_0,font.glyphAtlas);
+  rxpipset_texture(REG_PS_TEX_0,config->font.glyphAtlas);
   rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
 
-  for(int i=0;i<length;i+=1)
+
+
+  for(int i=0;i<config->length;i+=1)
   {
-    int code = *string ++;
+    int codepoint = *config->string ++;
 
-    if(code < 32)
-      continue;
+    Glyph_Data d = config->font.glyphArray[codepoint - config->font.glyphCodeStart];
+	  Glyph_Quad q = config->font.glyphQuads[codepoint - config->font.glyphCodeStart];
 
-    if(color_table != NULL)
+	  /* some fonts support the whitespace char other not, either way
+	   is safer to just early out or get this from the font itself  #todo */
+	  if( (codepoint ==  ' ') ||
+	      (codepoint == '\t') ||
+	      (codepoint == '\r') ||
+	      (codepoint == '\n') ) goto skip;
+
+    if(config->color_table != NULL)
     {
-    	color = color_table[color_array[i]];
+    	config->color = config->color_table[config->color_array[i]];
     }
 
-    x += Font_Add_Glyph(font,code,x,y,color);
+    float x0 = config->x + d.offsetX;
+  	float y0 = config->y + d.offsetY;
+
+	  float x1 = x0 + d.imageWidth;
+	  float y1 = y0 + d.imageHeight;
+
+	  rximp_begin();
+	    rx.imp.attr.rgba = config->color;
+	    rxaddvtx(rxvtx_xyuv(x0,y0,q.x0,q.y1));
+	    rxaddvtx(rxvtx_xyuv(x0,y1,q.x0,q.y0));
+	    rxaddvtx(rxvtx_xyuv(x1,y1,q.x1,q.y0));
+	    rxaddvtx(rxvtx_xyuv(x1,y0,q.x1,q.y1));
+	    rxaddnidx(6, 0,1,2, 0,2,3);
+	  rximp_end();
+
+skip:
+	  config->x += d.advanceWidth;
   }
 }
 

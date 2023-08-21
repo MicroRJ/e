@@ -62,3 +62,17 @@ typedef struct
 } Glyph_Font;
 
 typedef Glyph_Font efont;
+
+/* is either the font knows about the renderer or the renderer knows about the font
+	or this becomes a separate file #pending */
+typedef struct
+{
+	efont            font;
+	float            height;
+	float            x,y;
+	rxcolor_t        color;/* color is used if the color_array is null */
+	rxcolor_t     *  color_table;
+	unsigned char *  color_array;
+	int              length;
+	char const     * string;
+} edraw_text_config_t;

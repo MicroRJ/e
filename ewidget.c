@@ -69,12 +69,16 @@ ewdg(erect_t rect, eeditor_t *widget)
   {
     emarker_t *line = widget->buffer.lcache + widget->lyview + i;
 
-    edraw_text(widget->font,widget->text_size,RX_RGBA_UNORM(122,104,81,255),
-      rect.x0,
-      rect.y1 - widget->font.lineHeight * (1 + i),
-        line->length,
-        	widget->buffer.memory + line->offset, widget->buffer.syntax.color_table,
-        	widget->buffer.colors + line->offset);
+    edraw_text_config_t config =
+			draw_text_config_init(widget->font,widget->text_size,
+				0,0,RX_RGBA(0,0,0,0),NULL,NULL,line->length,NULL);
+		config.color_table = widget->buffer.syntax.color_table;
+		config.color_array = widget->buffer.colors + line->offset;
+		config.string      = widget->buffer.memory + line->offset;
+    config.x           = rect.x0;
+    config.y           = rect.y1 - widget->font.lineHeight * (1 + i);
+
+		edraw_text( &config );
   }
 
   set_clip_rect(RECT_HUGE);
