@@ -65,7 +65,7 @@ ewdg(erect_t rect, eeditor_t *widget)
     }
   }
 
-  for(int i=0; i<rxmini(earray_length(widget->buffer.lcache) - widget->lyview,24); i += 1)
+  for(int i=0; i<rxmini(earray_length(widget->buffer.lcache) - widget->lyview,64); i += 1)
   {
     emarker_t *line = widget->buffer.lcache + widget->lyview + i;
 
@@ -76,7 +76,7 @@ ewdg(erect_t rect, eeditor_t *widget)
 		config.color_array = widget->buffer.colors + line->offset;
 		config.string      = widget->buffer.memory + line->offset;
     config.x           = rect.x0;
-    config.y           = rect.y1 - widget->font.lineHeight * (1 + i);
+    config.y           = rect.y1 - widget->text_size * (1 + i);
 
 		edraw_text( &config );
   }

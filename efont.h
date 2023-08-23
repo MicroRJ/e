@@ -41,6 +41,7 @@ typedef struct
   float x0,y0,x1,y1;
 } Glyph_Quad;
 
+/* everything is expressed in a y-upwards coordinate system */
 typedef struct
 {
   char const *filePath;
@@ -52,13 +53,27 @@ typedef struct
   int glyphCodeStart;
   int glyphCodeEnd;
 
+  int isSDF;
+  int isWidened;
+  int isSubpixelReady;
+
   float height;
-  /* should probably round these #todo */
+
+  float lineHeight;
   float ascent;
   float descent;
   float lineGap;
 
-  float lineHeight;
+  /* for underline effect, offset is relative to the baseline,
+   height is whatever the designer thought looked nice for the
+   underline's thickness */
+  float underline_baseline_offset;
+  float underline_thickness;
+
+  struct
+  {
+  	FT_Face face;
+  } freetype;
 } Glyph_Font;
 
 typedef Glyph_Font efont;

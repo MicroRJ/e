@@ -1,5 +1,6 @@
-*.vs
+.vs
 *.exe
 *.pdb
 *.asm
 *.obj
+freetype

@@ -29,6 +29,10 @@
 #pragma warning(disable:4324)
 #include "meow_hash_x64_aesni.h"
 
+#pragma comment(lib,"freetype")
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 void
 draw_box_sdf(
   rxvec2_t center, rxvec2_t radius, rxcolor_t color, float roundness, float softness );
@@ -58,8 +62,9 @@ int main(int argc, char **argv)
   ZeroMemory(&editor,sizeof(editor));
 
   eaddcur(&editor,(ecursor_t){0,0});
-  editor.font = Load_Glyph_Font("assets\\Hack\\Hack_v3_003\\Hack-BoldItalic.ttf",32.);
-  editor.text_size = 32;
+  editor.font = Load_Glyph_Font("assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf",64);
+  // editor.font = Load_Glyph_Font("assets\\Roboto\\Roboto-Regular.ttf",64.);
+  editor.text_size = 64;
   eeditor_load(&editor,"todo.txt");
   editor.widget.focused = TRUE;
 
@@ -83,17 +88,11 @@ int main(int argc, char **argv)
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_UP))
     {
-      efont new_font = efont_load(editor.font.filePath,editor.font.height+2);
-      efont_free(editor.font);
-      editor.font = new_font;
-      editor.text_size = editor.font.height;
+      editor.text_size += 2;
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_DOWN))
     {
-      efont new_font = efont_load(editor.font.filePath,editor.font.height-2);
-      efont_free(editor.font);
-      editor.font = new_font;
-      editor.text_size = editor.font.height;
+      editor.text_size -= 2;
     } else
     if(rxisctrl() && rxtstkey('P'))
     { // cmd.widget.focused = !cmd.widget.focused;
@@ -117,16 +116,18 @@ int main(int argc, char **argv)
 
       for(int i=0; i<1; i+=1)
       {
-        erect_t f = rect_cut(&r,RECT_kBOT,editor.font.height);
+        erect_t f = rect_cut(&r,RECT_kBOT,22.);
         draw_rect(f, RX_RGBA_UNORM(122,104,81,255));
 
         edraw_text_config_t config =
-				draw_text_config_init(editor.font,editor.text_size,
+				draw_text_config_init(editor.font,22.,
 					f.x0,f.y0,RX_RGBA_UNORM(8,36,36,255),NULL,NULL,-1,NULL);
 
-				config.string = ccformat("%i,%i %s (%i/%i) %s",
+				config.string = ccformat(
+					"%i,%i %s (%i/%i) %s @%f",
 					egetcurx(&editor,0),egetcury(&editor,0),
-            editor.buffer.tag,editor.buffer.length,editor.buffer.extent,ccfnames(editor.font.filePath));
+            editor.buffer.tag,editor.buffer.length,editor.buffer.extent,ccfnames(editor.font.filePath),
+            	editor.text_size);
 
         edraw_text(&config);
       }

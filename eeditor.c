@@ -186,11 +186,11 @@ esetcur(
     char *ptr = egetptr2(editor,old.xchar,cur.yline);
     if(cur.xchar > old.xchar)
     { for(int i=0;i<cur.xchar-old.xchar;i+=1)
-        inf += efont_code_xadv(editor->font,ptr[i-0]);
+        inf += efont_code_xadv(editor->font,editor->text_size,ptr[i-0]);
     } else
     if(cur.xchar < old.xchar)
     { for(int i=0;i>cur.xchar-old.xchar;i-=1)
-        inf -= efont_code_xadv(editor->font,ptr[i-1]);
+        inf -= efont_code_xadv(editor->font,editor->text_size,ptr[i-1]);
     }
   }
 
@@ -231,19 +231,18 @@ ecurrec(
   ecursor_t cur = egetcur(wdg,index);
   emarker_t row = ebuffer_get_line_marker(&wdg->buffer,cur.yline);
 
-  int cur_offset = ecurchr(wdg,index,0);
+  int curchr = ecurchr(wdg,index,0);
 
   /* #todo I'd probably want to support having different sized lines */
-  float y = (cur.yline - wdg->lyview) * wdg->font.lineHeight;
-
+  float y = (cur.yline - wdg->lyview) * wdg->text_size;
   float x = egetinf(wdg,index);
 
   /* #todo */
   int cur_xsize = rxmaxi(
-    efont_code_width(wdg->font,'.'),
-    efont_code_width(wdg->font,cur_offset));
+    efont_code_width(wdg->font,wdg->text_size,'.'),
+    efont_code_width(wdg->font,wdg->text_size,curchr));
 
-  int cur_ysize = wdg->font.lineHeight;
+  int cur_ysize = wdg->text_size;
 
   y += cur_ysize * .2;
 
@@ -539,6 +538,7 @@ eeditor_unload(
   return result;
 }
 
+/* remove from here #todo */
 void
 eeditor_msg(
   eeditor_t *editor)
@@ -594,6 +594,7 @@ eeditor_msg(
          (ptr[1]=='\n')) num += 1;
 
       ebuffer_remove(&editor->buffer,row.offset,row.length+num);
+      ebuffer_update_lcache(&editor->buffer);
     }
 
   } else
