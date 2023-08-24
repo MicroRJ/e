@@ -55,7 +55,7 @@ ewdg(erect_t rect, eeditor_t *widget)
       erect_t cur_rec = ecurrec(widget,i,rect);
 
       /* this function should just take an e-rect */
-      draw_box_sdf(
+      EMU_imp_rect_sdf(
         rxvec2_xy(
           cur_rec.x0 + (cur_rec.x1 - cur_rec.x0) * .5,
           cur_rec.y0 + (cur_rec.y1 - cur_rec.y0) * .5),
@@ -69,14 +69,14 @@ ewdg(erect_t rect, eeditor_t *widget)
   {
     emarker_t *line = widget->buffer.lcache + widget->lyview + i;
 
-    edraw_text_config_t config =
+    EMU_draw_text_config_t config =
 			draw_text_config_init(widget->font,widget->text_size,
 				0,0,RX_RGBA(0,0,0,0),NULL,NULL,line->length,NULL);
 		config.color_table = widget->buffer.syntax.color_table;
 		config.color_array = widget->buffer.colors + line->offset;
 		config.string      = widget->buffer.memory + line->offset;
     config.x           = rect.x0;
-    config.y           = rect.y1 - widget->text_size * (1 + i);
+    config.y           = rect.y1 - (widget->line_height) * (1 + i);
 
 		edraw_text( &config );
   }

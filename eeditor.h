@@ -90,8 +90,9 @@ typedef struct
   ebuffer_t  buffer;
   int        lyview;
 
-  efont      font;
-  float      text_size;
+  efont font;
+  int text_size;
+  float line_height;
 
   float      tab_size_in_spaces;
 

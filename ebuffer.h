@@ -52,15 +52,12 @@ typedef struct
 } ebuffer_t;
 
 typedef struct
-{
-	char const * tag;
+{ char const * tag;
 	char const * disk_save;
 	char const * disk_load;
-
 	char       * memory;
 	char       * colors;
 	int          length;
-
 	esyntax_t  * syntax;
 } ebuffer_config_t;
 

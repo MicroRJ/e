@@ -1,7 +1,3 @@
-@IF "%INCLUDE%"=="" (
-  @CALL vcvars64
-)
-
 @SETLOCAL
 @SET myName=%1
 
@@ -10,7 +6,7 @@
 @SET myLinkerOptions=/DEBUG /SUBSYSTEM:CONSOLE /INCREMENTAL:NO
 @SET myInclude=/I. /Ifreetype/include
 
-@CALL cl %myCompilerOptions% %myInclude% %myName%.cc /Fe%myName%.exe /link %myLinkerOptions%
+@CALL cl %myCompilerOptions% %myInclude% %myName%.c /Fe%myName%.exe /link %myLinkerOptions%
 
 @IF "%2"=="TRUE" (
 	@CALL %myName%.exe

@@ -1,5 +1,3 @@
-
-
 @PUSHD rx
 @CALL build.msvc.bat
 @POPD

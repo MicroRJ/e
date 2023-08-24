@@ -51,7 +51,7 @@ int is_click_enter_rect(erect_t rect)
 void
 draw_rect(erect_t rect, rxcolor_t color)
 {
-  rxdraw_rect(color,
+  EMU_imp_rect(color,
     rect.x0, rect.y0,
     (rect.x1 - rect.x0),
     (rect.y1 - rect.y0));

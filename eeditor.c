@@ -234,7 +234,7 @@ ecurrec(
   int curchr = ecurchr(wdg,index,0);
 
   /* #todo I'd probably want to support having different sized lines */
-  float y = (cur.yline - wdg->lyview) * wdg->text_size;
+  float y = (cur.yline - wdg->lyview) * wdg->line_height;
   float x = egetinf(wdg,index);
 
   /* #todo */
@@ -242,11 +242,11 @@ ecurrec(
     efont_code_width(wdg->font,wdg->text_size,'.'),
     efont_code_width(wdg->font,wdg->text_size,curchr));
 
-  int cur_ysize = wdg->text_size;
+  y += wdg->text_size * .2;
 
-  y += cur_ysize * .2;
+  float cursor_height = wdg->text_size * 1.2;
 
-  return erect_xywh(rect.x0+x,rect.y1-y-cur_ysize,cur_xsize,cur_ysize);
+  return erect_xywh(rect.x0+x,rect.y1-y-wdg->line_height,cur_xsize,cursor_height);
 }
 
 ecursor_t
@@ -547,6 +547,32 @@ eeditor_msg(
   ekey_one(editor,EDITOR_kMOD_ALT,0,rxismenu(),0);
   ekey_one(editor,EDITOR_kMOD_SHIFT,0,rxisshft(),0);
 
+  if(IS_CLICK_ENTER(0))
+  {
+  	int xcursor = + rx.wnd.in.mice.xcursor;
+  	int ycursor = - rx.wnd.in.mice.ycursor + rx.wnd.size_y;
+
+  	int yline = editor->lyview + ycursor / editor->line_height;
+  	ccdebuglog("%i",yline);
+
+  	emarker_t line = ebuffer_get_line_marker(&editor->buffer,yline);
+  	char *string = editor->buffer.memory + line.offset;
+
+  	float xwalk = 0;
+  	for(int xchar=0; xchar<line.length; xchar+=1)
+  	{
+  		float width = efont_code_xadv(editor->font,editor->text_size,string[xchar]);
+
+  		if(xcursor >= xwalk && xcursor <= xwalk + width)
+  		{
+  			esetcur(editor,0,(ecursor_t){xchar,yline});
+  			break;
+  		}
+
+  		xwalk += width;
+  	}
+
+  } else
   if(rxisctrl() && rxtstkey('Z'))
   {
     eevent_t event = epopevn(editor);

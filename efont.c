@@ -19,60 +19,48 @@
 **
 */
 
-/* dynamic glyph allocator #todo */
-
-void *
-Load_File_Data(char const *filePath, size_t *lpSize)
-{
-  void *file = ccopenfile(filePath,"r");
-  ccu32_t length = 0;
-  void *memory = ccpullfile(file,0,&length);
-
-  if(lpSize) *lpSize = length;
-  return memory;
-}
-
-edraw_text_config_t
-draw_text_config_init(
-  efont            font,
-  float            height,
-  float            x,
-  float            y,
-  rxcolor_t        color,
-  rxcolor_t     *  color_table,
-  unsigned char *  color_array,
-  int              length,
-  char const     * string )
-{
-  edraw_text_config_t config;
-  config.font        = font;
-  config.height      = height;
-  config.x           = x;
-  config.y           = y;
-  config.color       = color;
-  config.color_table = color_table;
-  config.color_array = color_array;
-  config.length      = length;
-  config.string      = string;
-  return config;
-}
-
 
 void
-edraw_text( edraw_text_config_t *config );
-
-void
-edraw_text_easy( efont font, float height, rxcolor_t color,
-  float x, float y, int length, char const *string)
+EMU_apply_pipeline_for_font( Glyph_Font *font )
 {
-  edraw_text_config_t config =
-    draw_text_config_init(font,height,x,y,color,NULL,NULL,length,string);
+	int mode = EMU_IMP_MODE_2D;
 
-  edraw_text( &config );
+	if (font->is_subpixel) {
+		mode = EMU_IMP_MODE_LCD_TEXT;
+	} else
+	if (font->is_sdf) {
+		mode = EMU_IMP_MODE_SDF_TEXT;
+	}
+
+	EMU_imp_apply(mode,FALSE);
+
+  rxpipset_texture(REG_PS_TEX_0,font->glyphAtlas,FALSE);
 }
 
+float
+EMU_font_get_kerning(
+  Glyph_Font *font, char prev_char, char curr_char )
+{
+  float result = .0;
+
+#if 1
+  if(FT_HAS_KERNING(font->freetype.face))
+  {
+    FT_Vector kerning2;
+    FT_Get_Kerning(font->freetype.face,
+    /* may need to store this #todo */
+      FT_Get_Char_Index(font->freetype.face,prev_char),
+      FT_Get_Char_Index(font->freetype.face,curr_char),
+        FT_KERNING_DEFAULT, &kerning2);
+
+    result += kerning2.x / 64.;
+  }
+#endif
+
+  return result;
+}
 void
-edraw_text( edraw_text_config_t *config )
+edraw_text( EMU_draw_text_config_t *config )
 {
   if(config->length == -1)
   {
@@ -84,207 +72,160 @@ edraw_text( edraw_text_config_t *config )
     return;
   }
 
+  EMU_apply_pipeline_for_font(&config->font);
+
   float scale = config->height / config->font.height;
-
-  rx2d();
-  rxpipset_varying(REG_VS_BLC_0,rx.imp.varying);
-  rxpipset_varying(REG_PS_BLC_0,rx.imp.varying);
-  rxpipset_program(rx.imp.sha_vtx,rx.imp.sha_pxl_txt);
-  rxpipset_texture(REG_PS_TEX_0,config->font.glyphAtlas);
-  rxpipset_sampler(REG_PS_SAM_0,rx.point_sampler);
-
-  // if(config->font.isSubpixelReady)
-  // {
-  // } else
-  // {
-  // rxpipset_sampler(REG_PS_SAM_0,rx.linear_sampler);
-  // }
-
-  float unwiden = 1. / (config->font.isWidened ? 3. : 1.);
+  float unwiden = 1. / (config->font.is_subpixel ? 3. : 1.);
 
   for(int i=0;i<config->length;i+=1)
   {
     int chr = config->string[i];
 
-    Glyph_Data d = config->font.glyphArray[chr - config->font.glyphCodeStart];
-    Glyph_Quad q = config->font.glyphQuads[chr - config->font.glyphCodeStart];
+    Glyph_Data d = config->font.glyphArray[chr - config->font.charset_start];
 
     /* some fonts support the whitespace char other not, either way
      is safer to just early out or get this from the font itself  #todo */
-    if( (chr ==  ' ') ||
-        (chr == '\t') ||
-        (chr == '\r') ||
-        (chr == '\n') ) goto skip;
+    if IS_WHITESPACE(chr) {
+      goto skip_rendering;
+    }
 
-    if(config->color_table != NULL)
-    {
+    if IS_NOT_NULL(config->color_table) {
       config->color = config->color_table[config->color_array[i]];
     }
 
-    float x0 = config->x + d.offsetX * scale * unwiden;
-    float y0 = config->y + d.offsetY * scale;
+    float x0 = config->x + d.offsetX * unwiden;
+    float y0 = config->y + d.offsetY;
 
-
-    if(i != 0)
-    {
-      if(FT_HAS_KERNING(config->font.freetype.face))
-      {
-        FT_Vector kerning2;
-
-        int prev_glyph_index = FT_Get_Char_Index(config->font.freetype.face,config->string[i-1]);
-        int glyph_index = FT_Get_Char_Index(config->font.freetype.face,chr);
-
-        FT_Get_Kerning(config->font.freetype.face,
-          prev_glyph_index,glyph_index,FT_KERNING_DEFAULT,&kerning2);
-
-        x0 += kerning2.x >> 6;
-      }
+    if (i != 0) {
+      x0 += EMU_font_get_kerning( &config->font, config->string[i-1], chr );
     }
 
+    x0 *= scale;
+    y0 *= scale;
 
     float x1 = x0 + d.imageWidth * scale * unwiden;
     float y1 = y0 + d.imageHeight * scale;
 
-    rximp_begin();
-      rx.imp.attr.rgba = config->color;
-      rxaddvtx(rxvtx_xyuv(x0,y0,q.x0,q.y1));
-      rxaddvtx(rxvtx_xyuv(x0,y1,q.x0,q.y0));
-      rxaddvtx(rxvtx_xyuv(x1,y1,q.x1,q.y0));
-      rxaddvtx(rxvtx_xyuv(x1,y0,q.x1,q.y1));
-      rxaddnidx(6, 0,1,2, 0,2,3);
-    rximp_end();
+    float xnor = 1. / config->font.glyphAtlas->size_x;
+    float ynor = 1. / config->font.glyphAtlas->size_y;
 
-skip:
+    EMU_imp_begin(6,4);
+      rx.imp.attr.rgba = config->color;
+      rxaddnidx(6, 0,1,2, 0,2,3);
+      rxaddnvtx(4,
+      	rxvtx_xyuv(x0,y0, d.x0 * xnor, d.y1 * ynor),
+      	rxvtx_xyuv(x0,y1, d.x0 * xnor, d.y0 * ynor),
+				rxvtx_xyuv(x1,y1, d.x1 * xnor, d.y0 * ynor),
+				rxvtx_xyuv(x1,y0, d.x1 * xnor, d.y1 * ynor));
+    EMU_imp_end();
+
+skip_rendering:
     config->x += d.advanceWidth * scale;
   }
 }
 
 
-typedef struct
-{ struct
-  { char const *file;
-    void       *memory;
-    int         length;
-  } ttf;
-  int         char_start;
-  int         char_end;
-  char const *char_string;
-  int is_static;
-  int edge_value;
-  int sample_size;
-  int padding;
-  int supports_subpixel;
-  int supports_sdf;
-} efont_config_t;
-
-typedef struct
-{
-	struct
-	{
-		int offset_x, offset_y;
-		int stride, height;
-		unsigned char *cursor;
-	} dst;
-
-	struct
-	{
-		int offset_x, offset_y;
-		int stride, height;
-		unsigned char const *cursor;
-	} src;
-
-} rxmemory_copy_config_t;
-
-void
-rxmemory_copy(
-	rxmemory_copy_config_t *config )
-{
-  for (int y = 0; y < config->src.height; y += 1)
-  {
-    memcpy(
-      config->dst.cursor + config->dst.stride * (y + config->dst.offset_y) + config->dst.offset_x,
-      config->src.cursor + config->src.stride * (y + config->src.offset_y) + config->src.offset_x, config->src.stride );
-  }
-}
-
+#pragma warning(disable:4701)
+#pragma warning(disable:4703)
 Glyph_Font
-Load_Glyph_Font(
+EMU_load_glyph_font(
   char const *filePath, float requestedHeight)
 {
-	FT_Library library_ft;
-	if(FT_Init_FreeType(&library_ft))
-	{
-		ccbreak();
-	}
+  Glyph_Font font;
 
-	FT_Face face_ft;
-	if(FT_New_Face(library_ft,filePath,0,&face_ft))
-	{
-		ccbreak();
-	}
-	if(FT_Set_Pixel_Sizes(face_ft,0,requestedHeight))
-	{
-		ccbreak();
-	}
+  int glyphStart = 32;
+  int glyphEnd = 126;
 
-	/* 16.16 to 24.6 to 32. */
+  float ascentInPixels;
+  float descentInPixels;
+  float lineGapInPixels;
+  float fontHeightInPixels;
+  float lineHeightInPixels;
+  Glyph_Data *glyphArray;
+  Emu_texture_t *glyphAtlas;
+
+
+
+  int is_subpixel;
+  int is_sdf;
+
+#if 1
+  FT_Library library_ft;
+  if(FT_Init_FreeType(&library_ft)) {
+    cctraceerr("failed to init FreeType");
+    goto leave;
+  }
+
+  FT_Face face_ft;
+  if(FT_New_Face(library_ft,filePath,0,&face_ft)) {
+    cctraceerr("failed to load file path");
+    goto leave;
+  }
+
+  if(FT_Set_Pixel_Sizes(face_ft,0,requestedHeight)) {
+    cctraceerr("invalid pixel size");
+    goto leave;
+  }
+
+  is_subpixel = TRUE;
+  is_sdf = FALSE;
+
+  /* 16.16 to 24.6 to 32. */
   float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
   float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
 
-  float ascentInPixels = face_ft->ascender * units_to_pixels;
-  float descentInPixels = face_ft->descender * units_to_pixels;
-  float lineGapInPixels = lineGap * units_to_pixels;
-  float lineHeightInPixels = requestedHeight;
-  float fontHeightInPixels = requestedHeight;
+  ascentInPixels = face_ft->ascender * units_to_pixels;
+  descentInPixels = face_ft->descender * units_to_pixels;
+  lineGapInPixels = lineGap * units_to_pixels;
+  lineHeightInPixels = requestedHeight;
+  fontHeightInPixels = requestedHeight;
 
-	float tallestGlyph = 0;
-
-	int glyphStart = 32;
-  int glyphEnd   = 126;
-  Glyph_Data *glyphArray = NULL;
-  Glyph_Quad *glyphQuads = NULL;
+  float tallestGlyph = 0;
 
   int atlasWidth = 1024;
   int atlasHeight = 1024;
-  rxtexture_t glyphAtlas = rxtexture_create(atlasWidth,atlasHeight,rxRGB8);
-  rxborrowed_t atlasMemory = rxtexture_borrow(glyphAtlas);
+  glyphAtlas = Emu_texture_create_simple(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM,0,NULL);
 
-  rxmemory_copy_config_t atlas_copy_config;
+  int atlasStride;
+  unsigned char *atlasMemory = Emu_texture_borrow(glyphAtlas,&atlasStride);
+
+  glyphArray = NULL;
+
+  Emu_memcpy2d_config_t atlas_copy_config;
   atlas_copy_config.dst.offset_x = 0;
   atlas_copy_config.dst.offset_y = 0;
   atlas_copy_config.dst.height   = atlasHeight;
-  atlas_copy_config.dst.stride   = atlasMemory.stride;
-  atlas_copy_config.dst.cursor   = atlasMemory.cursor;
+  atlas_copy_config.dst.stride   = atlasStride;
+  atlas_copy_config.dst.cursor   = atlasMemory;
 
   int codepoint;
   for ( codepoint  = glyphStart;
         codepoint  < glyphEnd;    codepoint += 1 )
   {
-  	Glyph_Data *data = earray_add(glyphArray,1);
-    Glyph_Quad *quad = earray_add(glyphQuads,1);
+    Glyph_Data *data = earray_add(glyphArray,1);
     memset(data,0,sizeof(*data));
-    memset(quad,0,sizeof(*quad));
 
-		quad->codepoint = codepoint;
     data->codepoint = codepoint;
 
-		if(FT_Load_Char(face_ft,codepoint,FT_LOAD_DEFAULT))
-		{
-			cctracewar("failed to load glyph %c",codepoint);
-			continue;
-		}
+    if(FT_Load_Char(face_ft,codepoint,FT_LOAD_DEFAULT))
+    {
+      cctracewar("failed to load glyph %c",codepoint);
+      continue;
+    }
 
-	  if(FT_Render_Glyph(face_ft->glyph,FT_RENDER_MODE_LCD))
-	  {
-			cctracewar("failed to render glyph %c",codepoint);
-			continue;
-	  }
+    // FT_RENDER_MODE_LCD
+    // FT_RENDER_MODE_NORMAL
 
-	  int imageWidth = face_ft->glyph->bitmap.width;
-	  int imageHeight = face_ft->glyph->bitmap.rows;
-	  unsigned char *imageData = face_ft->glyph->bitmap.buffer;
+    if(FT_Render_Glyph(face_ft->glyph,FT_RENDER_MODE_LCD)) {
+      cctracewar("failed to render glyph %c",codepoint);
+      continue;
+    }
 
-	  if(imageHeight > tallestGlyph)
+    int imageWidth = face_ft->glyph->bitmap.width;
+    int imageHeight = face_ft->glyph->bitmap.rows;
+    unsigned char *imageData = face_ft->glyph->bitmap.buffer;
+
+    if(imageHeight > tallestGlyph)
     {
       tallestGlyph = imageHeight;
     }
@@ -297,20 +238,20 @@ Load_Glyph_Font(
 
     if(imageData != NULL)
     {
-		  atlas_copy_config.src.offset_x = 0;
-		  atlas_copy_config.src.offset_y = 0;
-		  atlas_copy_config.src.height = face_ft->glyph->bitmap.rows;
-		  atlas_copy_config.src.stride = face_ft->glyph->bitmap.pitch;
-		  atlas_copy_config.src.cursor = face_ft->glyph->bitmap.buffer;
-			rxmemory_copy(&atlas_copy_config);
+      atlas_copy_config.src.offset_x = 0;
+      atlas_copy_config.src.offset_y = 0;
+      atlas_copy_config.src.height = face_ft->glyph->bitmap.rows;
+      atlas_copy_config.src.stride = face_ft->glyph->bitmap.pitch;
+      atlas_copy_config.src.cursor = face_ft->glyph->bitmap.buffer;
+      EMU_memcpy2d(&atlas_copy_config);
     }
 
-    quad->x0 = atlas_copy_config.dst.offset_x / (float) atlasWidth;
-    quad->y0 = atlas_copy_config.dst.offset_y / (float) atlasHeight;
-    quad->x1 = quad->x0 + imageWidth / (float) atlasWidth;
-    quad->y1 = quad->y0 + imageHeight / (float) atlasHeight;
+    data->x0 = atlas_copy_config.dst.offset_x;
+    data->y0 = atlas_copy_config.dst.offset_y;
+    data->x1 = data->x0 + imageWidth;
+    data->y1 = data->y0 + imageHeight;
 
-    data->advanceWidth = face_ft->glyph->advance.x >> 6;
+    data->advanceWidth = face_ft->glyph->advance.x / 64.;
     data->offsetX = face_ft->glyph->bitmap_left;
     data->offsetY = face_ft->glyph->bitmap_top - imageHeight;
     data->imageWidth = imageWidth;
@@ -319,73 +260,76 @@ Load_Glyph_Font(
     atlas_copy_config.dst.offset_x += imageWidth;
   }
 
-  rxreturn(atlasMemory);
-
-#if 0
+leave:
+  // FT_Done_Library(library_ft);
+  font.freetype.face = face_ft;
+#else
+  is_subpixel = FALSE;
+  is_sdf = TRUE;
 
 // #define FONT_SDF_PIXEL_DIST_SCALE 32
 // #define FONT_SDF_CHAR_PADDING     8
 // #define FONT_SDF_ON_EDGE_VALUE    128
-
 #ifndef FONT_SDF_CHAR_PADDING
 #define FONT_SDF_CHAR_PADDING         8
 # endif
 #ifndef FONT_SDF_ON_EDGE_VALUE
-#define FONT_SDF_ON_EDGE_VALUE        0xff
+#define FONT_SDF_ON_EDGE_VALUE        128
 # endif
 #ifndef FONT_SDF_PIXEL_DIST_SCALE
-#define FONT_SDF_PIXEL_DIST_SCALE     256-16
+#define FONT_SDF_PIXEL_DIST_SCALE     32
 # endif
-
   size_t fileLength;
-  void *fileMemory = Load_File_Data(filePath,&fileLength);
+  void *fileMemory = EMU_load_file_data(filePath,&fileLength);
+
+  if IS_NULL(fileMemory) {
+    cctraceerr("failed to load file");
+    goto leave;
+  }
 
   /* store this for the dynamically adding glyphs and such */
   stbtt_fontinfo fontInfo;
-  stbtt_InitFont(&fontInfo,fileMemory,0);
+  if(stbtt_InitFont(&fontInfo,fileMemory,0) == 0) {
+    cctraceerr("failed to init font");
+    goto leave;
+  }
+
+  float emToPixels = stbtt_ScaleForPixelHeight(&fontInfo,requestedHeight);
 
   int ascentEm,descentEm,lineGapEm;
   stbtt_GetFontVMetrics(&fontInfo,&ascentEm,&descentEm,&lineGapEm);
 
-  float emToPixels = stbtt_ScaleForPixelHeight(&fontInfo,fontHeight);
+  int atlasWidth  = 1024*2;
+  int atlasHeight = 512;
+
+  fontHeightInPixels = requestedHeight;
+  lineHeightInPixels = (ascentEm - descentEm + lineGapEm) * emToPixels;
+  ascentInPixels =  ascentEm * emToPixels,
+  descentInPixels = descentEm * emToPixels,
+  lineGapInPixels = lineGapEm * emToPixels;
+  glyphArray = NULL;
+  glyphAtlas = Emu_texture_create_simple(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
+  atlasMemory = Emu_texture_borrow(glyphAtlas);
 
   /* widen the glyphs to prepare for sub-pixel rendering, subsequent renderers
     must take this into account #noteworthy we could also get rid of it by simply
     encoding this larger image into a 3/4 component image, it would take the same
     space but it would be more friendly #pending */
-  float wideningFactor = 3.;
-
-  float lineHeight = (ascentEm - descentEm + lineGapEm) * emToPixels;
-
-  float  ascent =  ascentEm * emToPixels,
-        descent = descentEm * emToPixels,
-        lineGap = lineGapEm * emToPixels;
-
-  int atlasWidth  = 1024*8;
-  int atlasHeight = 512;
-
+  float wideningFactor = 1.;
   int tallestGlyph = 0;
 
   /* generate the atlas, should let the user pick the size since it is
     used for caching #todo, though you shouldn't worry too much about
     the initial size, this changes dynamically anyways, glyphs are baked in and out fifo style */
-  Glyph_Data *glyphArray = NULL;
-  Glyph_Quad *glyphQuads = NULL;
-
-  rxtexture_t glyphAtlas = rxtexture_create(atlasWidth,atlasHeight,rxRGB8);
-  rxborrowed_t atlasMemory = rxtexture_borrow(glyphAtlas);
 
   int atlasY = 0, atlasX = 0;
 
-  int glyphStart = 32;
-  int glyphEnd   = 126;
   int codepoint;
   for ( codepoint  = glyphStart;
         codepoint  < glyphEnd;    codepoint += 1 )
   {
     /* we have to add the glyph even if the character is invisible #todo */
     Glyph_Data *data = earray_add(glyphArray,1);
-    Glyph_Quad *quad = earray_add(glyphQuads,1);
 
     int advanceWidthEm = 0;
     int leftSideBearingEm = 0;
@@ -395,7 +339,7 @@ Load_Glyph_Font(
     float leftSideBearing = leftSideBearingEm * emToPixels;
 
     int imageWidth = .5 + advanceWidth * wideningFactor;
-    int imageHeight = .5 + fontHeight;
+    int imageHeight = .5 + requestedHeight;
     unsigned char *imageData = NULL;
     int offsetX = 0;
     int offsetY = 0;
@@ -404,19 +348,19 @@ Load_Glyph_Font(
       especially once the user is allowed to specify the range */
     if(codepoint != ' ')
     {
-    	if(1)
-    	{
-	   		imageData = stbtt_GetGlyphBitmapSubpixel(
-	   			&fontInfo,emToPixels * wideningFactor,emToPixels,-.5,-.5,
-	   				stbtt_FindGlyphIndex(&fontInfo,codepoint),&imageWidth,&imageHeight,&offsetX,&offsetY);
-    	} else
-    	{
-	      imageData = stbtt_GetGlyphSDF(&fontInfo,emToPixels * wideningFactor,emToPixels,
-	        /* cache this #todo */
-	        stbtt_FindGlyphIndex(&fontInfo,codepoint),
-	          FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
-	            &imageWidth,&imageHeight,&offsetX,&offsetY);
-    	}
+      if(0)
+      {
+        imageData = stbtt_GetGlyphBitmapSubpixel(
+          &fontInfo,emToPixels * wideningFactor,emToPixels,-.5,-.5,
+            stbtt_FindGlyphIndex(&fontInfo,codepoint),&imageWidth,&imageHeight,&offsetX,&offsetY);
+      } else
+      {
+        imageData = stbtt_GetGlyphSDF(&fontInfo,emToPixels * wideningFactor,emToPixels,
+          /* cache this #todo */
+          stbtt_FindGlyphIndex(&fontInfo,codepoint),
+            FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
+              &imageWidth,&imageHeight,&offsetX,&offsetY);
+      }
     }
 
     if(imageHeight > tallestGlyph)
@@ -430,18 +374,17 @@ Load_Glyph_Font(
       atlasY += tallestGlyph; /* #todo */
     }
 
-    quad->codepoint = codepoint;
-    quad->x0 = atlasX / (float)atlasWidth;
-    quad->y0 = atlasY / (float)atlasHeight;
-    quad->x1 = (atlasX + imageWidth) / (float)atlasWidth;
-    quad->y1 = (atlasY + imageHeight) / (float)atlasHeight;
+    data->codepoint = codepoint;
+    data->x0 = atlasX;
+    data->y0 = atlasY;
+    data->x1 = atlasX + imageWidth;
+    data->y1 = atlasY + imageHeight;
     data->codepoint = codepoint;
     data->advanceWidth = advanceWidth;
     data->offsetX = offsetX;
-    data->offsetY = (lineHeight - imageHeight - offsetY)  - lineHeight;
+    data->offsetY = - offsetY - imageHeight ;
     data->imageWidth = imageWidth;
     data->imageHeight = imageHeight;
-    data->imageData = imageData;
 
     if(imageData != NULL)
     {
@@ -458,35 +401,29 @@ Load_Glyph_Font(
     }
   }
 
-  rxreturn(atlasMemory);
+leave:
+  font.stb.face = fontInfo;
 #endif
 
-leave:
-  Glyph_Font font;
-  font.isWidened = TRUE;
-  font.isSubpixelReady = TRUE;
-  font.isSDF = TRUE;
+  font.is_subpixel = is_subpixel;
+  font.is_sdf = is_sdf;
   font.filePath = filePath;
-  font.glyphCodeStart = glyphStart;
-  font.glyphCodeEnd = glyphEnd;
+  font.charset_start = glyphStart;
+  font.charset_end = glyphEnd;
   font.glyphAtlas = glyphAtlas;
   font.glyphArray = glyphArray;
-  font.glyphQuads = glyphQuads;
   font.ascent = ascentInPixels;
   font.descent = descentInPixels;
   font.lineGap = lineGapInPixels;
   font.lineHeight = lineHeightInPixels;
   font.height = fontHeightInPixels;
-  font.freetype.face = face_ft;
+
+
+  Emu_texture_return(glyphAtlas);
+
+
   return font;
 }
-
-
-efont
-efont_load(const char *, float);
-
-void
-efont_free(efont font);
 
 /* todo: support for kerning */
 ccinle float
@@ -510,17 +447,4 @@ efont_code_width(
     return 0;
   }
   return font.glyphArray[code - 32].advanceWidth * (height / font.height);
-}
-
-void
-efont_free(efont font)
-{
-  // ccfree(font.array);
-  // rxtexture_delete(font.atlas);
-}
-
-efont
-efont_load(const char *fpath, float vsize)
-{
-  return Load_Glyph_Font(fpath,vsize);
 }
