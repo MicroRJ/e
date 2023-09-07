@@ -19,18 +19,9 @@
 **
 */
 
-typedef struct ewidget_t
-{
-  erect_t  rect;
-  int      focused;
-} ewidget_t;
+typedef eeditor_t Emu_widget_t;
 
-/* this is something we'd have formalize - XXX - the one called rj */
-#define FOREGROUND_COLOR RX_RGBA_UNORM(0xC0,0xC0,0xC0,0xff)
-#define BACKGROUND_COLOR RX_RGBA_UNORM(0x12,0x12,0x12,0xff)
-#define RECT_HUGE RX_TLIT(erect_t){0,0,0xffff,0xffff}
-
-int cursor_in_rect(erect_t rect)
+int cursor_in_rect(Emu_rect_t rect)
 {
   return
   rect_in_xy(rect,
@@ -38,27 +29,27 @@ int cursor_in_rect(erect_t rect)
 		rx.wnd.in.mice.ycursor);
 }
 
-int is_click_leave_rect(erect_t rect)
+int is_click_leave_rect(Emu_rect_t rect)
 {
   return IS_CLICK_LEAVE(0) && cursor_in_rect(rect);
 }
 
-int is_click_enter_rect(erect_t rect)
+int is_click_enter_rect(Emu_rect_t rect)
 {
   return IS_CLICK_ENTER(0) && cursor_in_rect(rect);
 }
 
 void
-draw_rect(erect_t rect, rxcolor_t color)
+draw_rect(Emu_rect_t rect, rxcolor_t color)
 {
-  EMU_imp_rect(color,
+  Emu_imp_rect(color,
     rect.x0, rect.y0,
     (rect.x1 - rect.x0),
     (rect.y1 - rect.y0));
 }
 
 void
-set_clip_rect(erect_t rect)
+set_clip_rect(Emu_rect_t rect)
 {
   //rximp_clip(
   //  rect.x0,rect.y0,rect.x1,rect.y1);

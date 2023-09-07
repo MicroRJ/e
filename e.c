@@ -34,7 +34,7 @@
 #include FT_FREETYPE_H
 
 void
-EMU_imp_rect_sdf(
+Emu_imp_rect_sdf(
   rxvec2_t center, rxvec2_t radius, rxcolor_t color, float roundness, float softness );
 
 #include   "erect.c"
@@ -44,15 +44,12 @@ EMU_imp_rect_sdf(
 #include  "earray.c"
 #include "estring.c"
 #include "esyntax.h"
+#include   "efont.h"
+#include   "efont.c"
 #include "ebuffer.h"
 #include "ebuffer.c"
-#include  "emem2d.h"
-#include   "efont.h"
-efont default_font;/* todo */
-#include "ealloc2.c"
-#include   "efont.c"
-#include "ewidget.h"
 #include "eeditor.h"
+#include "ewidget.h"
 #include "esyntax.c"
 #include "ewidget.c"
 #include "eeditor.c"
@@ -74,30 +71,49 @@ int
 randi(
   int min, int max)
 {
-	int off = max - min;
+   int off = max - min;
 
-	return off <= 0 ? 0 : min + xorshift32(&RAND_seed) % off;
+   return off <= 0 ? 0 : min + xorshift32(&RAND_seed) % off;
+}
+
+void draw_single_text_line(
+   Emu_glyph_font_t *font, float x, float y, char const *string)
+{
+   Emu_font_text_config_t config;
+   ZeroMemory(&config,sizeof(config));
+   config.font = font;
+   config.x = x;
+   config.y = y;
+   config.char_height = font->char_height;
+   config.line_height = font->line_height;
+   config.tab_size = 2; /* in spaces */
+   config.color = RX_RGBA_UNORM(8,36,36,255);
+   config.color_table = NULL;
+   config.length = strlen(string);
+   config.string = string;
+   config.colors = NULL;
+
+   Emu_draw_text( &config );
 }
 
 int main(int argc, char **argv)
 {
   rxinit(L"e");
 
-  default_font = EMU_load_glyph_font( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
+  Emu_glyph_font_t *font = Emu_load_font( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
   eeditor_t editor;
   ZeroMemory(&editor,sizeof(editor));
+
   eaddcur(&editor,(ecursor_t){0,0});
-  editor.font = default_font;
-  editor.text_size = default_font.height;
-  editor.line_height = default_font.height * 1.4;
+  editor.font = font;
 
   eeditor_load(&editor,"todo.txt");
-  editor.widget.focused = TRUE;
 
-  Emu_texture_t *glyphTexture = editor.font.glyphAtlas;
+  // Emu_texture_t *glyphTexture = editor.font.glyphAtlas;
 
   int debug_overlay = 0;
+  int searching = 0;
 
   do
   {
@@ -119,15 +135,13 @@ int main(int argc, char **argv)
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_UP))
     {
-      editor.text_size += 2;
     } else
     if(rxisctrl() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_DOWN))
     {
-      editor.text_size -= 2;
     } else
     if(rxisctrl() && rxtstkey('P'))
-    { // cmd.widget.focused = !cmd.widget.focused;
-      // editor.widget.focused = !cmd.widget.focused;
+    {
+    	searching = !searching;
     } else
     if(rxisctrl() && rxtstkey('O'))
     { eeditor_load(&editor,fdlg());
@@ -136,42 +150,26 @@ int main(int argc, char **argv)
     { eeditor_unload(&editor,fdlg());
     } else
     {
-    	erect_t r = get_window_client_rect();
-
-      /* draw the background, should be a clear command instead #todo */
+      Emu_rect_t r = get_window_client_rect();
       draw_rect(r,RX_RGBA_UNORM(8,36,36,255));
 
-      if(debug_overlay)
+      if(Emu_widget_render(&editor,r))
       {
-        EMU_imp_rect_uv(RX_COLOR_WHITE,glyphTexture,rx.point_sampler,
-          0,0,glyphTexture->size_x,glyphTexture->size_y);
-
-      } else
-      {
-
-	      if(ewdg(r,&editor))
-	      {
-	      }
-
-	      for(int i=0; i<1; i+=1)
-	      {
-	        erect_t f = rect_cut(&r,RECT_kBOT,22.);
-	        draw_rect(f,RX_RGBA_UNORM(122,104,81,255));
-
-	        EMU_draw_text_config_t config =
-					draw_text_config_init(editor.font,22.,
-						f.x0,f.y0,RX_RGBA_UNORM(8,36,36,255),NULL,NULL,-1,NULL);
-
-					config.string = ccformat(
-						"%i,%i %s (%i/%i) %s @%f",
-						egetcurx(&editor,0),egetcury(&editor,0),
-	            editor.buffer.tag,editor.buffer.length,editor.buffer.extent,ccfnames(editor.font.filePath),
-	            	editor.text_size);
-
-	        edraw_text(&config);
-	      }
       }
 
+      for(int i=0; i<1; i+=1)
+      {
+        Emu_rect_t f = rect_cut(&r,RECT_kBOT,22.);
+        draw_rect(f,RX_RGBA_UNORM(122,104,81,255));
+
+         draw_single_text_line(editor.font,f.x0,f.y0,
+            ccformat("%i,%i %s (%i/%i) %s @%f %f",
+               egetcurx(&editor,0),egetcury(&editor,0),
+                  editor.buffer.tag,
+                  editor.buffer.length,
+                  editor.buffer.extent,
+                  ccfnames(editor.font->fpath),editor.font->char_height,1./rx.delta_seconds));
+      }
     }
 #endif
 

@@ -19,7 +19,7 @@
 **
 */
 
-typedef union erect_t/* lol */
+typedef union Emu_rect_t/* lol */
 { struct
   { rxvec2_t xy0;
     rxvec2_t xy1;
@@ -28,7 +28,7 @@ typedef union erect_t/* lol */
   {
     float x0,y0,x1,y1;
   };
-} erect_t;
+} Emu_rect_t;
 
 enum
 { RECT_kLFT ,
@@ -37,11 +37,11 @@ enum
   RECT_kBOT };
 
 
-ccinle erect_t
+ccinle Emu_rect_t
 erect_xyxy(
   float x0, float y0, float x1, float y1)
 {
-  erect_t rect;
+  Emu_rect_t rect;
   rect.x0 = x0; rect.x1 = x1;
   rect.y0 = y0; rect.y1 = y1;
 
@@ -50,7 +50,7 @@ erect_xyxy(
   return rect;
 }
 
-ccinle erect_t
+ccinle Emu_rect_t
 erect_xywh(
   float x, float y, float xx, float yy)
 {
@@ -59,18 +59,18 @@ erect_xywh(
 
 float
 rect_in_xy(
-  erect_t rect, float x, float y)
+  Emu_rect_t rect, float x, float y)
 {
   return
     ((x >= rect.x0) && (y >= rect.y0)) &&
     ((x <  rect.x1) && (y <  rect.y1));
 }
 
-erect_t
+Emu_rect_t
 rect_cut(
-  erect_t *rect, int mode, float size)
+  Emu_rect_t *rect, int mode, float size)
 {
-  erect_t result = erect_xywh(0,0,0,0);
+  Emu_rect_t result = erect_xywh(0,0,0,0);
   switch(mode)
   { case RECT_kTOP:
     { result = erect_xyxy(rect->x0,rect->y1-size,rect->x1,rect->y1);
@@ -92,10 +92,10 @@ rect_cut(
   return result;
 }
 
-erect_t
-rect_center(erect_t parent, erect_t child)
+Emu_rect_t
+rect_center(Emu_rect_t parent, Emu_rect_t child)
 {
-  erect_t result;
+  Emu_rect_t result;
   result.x0 = parent.x0 + ((parent.x1 - parent.x0) * .5) - ((child.x1 - child.x0) * .5);
   result.y0 = parent.y0 + ((parent.y1 - parent.y0) * .5) - ((child.y1 - child.y0) * .5);
   result.x1 = result.x0 + (child.x1 - child.x0);
@@ -103,8 +103,8 @@ rect_center(erect_t parent, erect_t child)
   return result;
 }
 
-erect_t
-rect_padd(erect_t rect, float xpadd, float ypadd)
+Emu_rect_t
+rect_padd(Emu_rect_t rect, float xpadd, float ypadd)
 {
   return
     erect_xyxy(

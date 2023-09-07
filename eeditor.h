@@ -58,6 +58,8 @@ typedef struct
   /* to be removed #todo */
   int  xchar;
   int  yline;
+
+  // int offset;
 } ecursor_t;
 
 typedef struct
@@ -72,33 +74,29 @@ typedef struct
 } eevent_t;
 
 
-
 typedef struct
 {
-  ewidget_t  widget; /* #important must be first field */
-
   unsigned is_control: 1;
   unsigned is_insert:  1;
   unsigned is_shift:   1;
   unsigned is_alt:     1;
 
-  ecursor_t *cursor;/* todo */
+  ecursor_t *cursor;
 
-  /* todo: we can do better */
+  /* we can do better #todo */
   float     *curinf;
 
   ebuffer_t  buffer;
   int        lyview;
 
-  efont font;
-  int text_size;
-  float line_height;
-
-  float      tab_size_in_spaces;
+  Emu_glyph_font_t *font;
 
   double     last_event_timer;
   eevent_t * trail;
   eevent_t   event;
+
+  float cursor_blink_speed_in_seconds;
+  float cursor_blink_timer;
 } eeditor_t;
 
 /* this is temporary */
@@ -142,11 +140,11 @@ ecurchr(
 char *
 ecurptr(
   eeditor_t *, int);
-erect_t
+Emu_rect_t
 ecurrec(
   eeditor_t *, int,
   /* this is temporary, the widget should store this? */
-    erect_t);
+    Emu_rect_t);
 
 char *
 egetptr(

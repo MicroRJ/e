@@ -111,7 +111,7 @@ egetptr(eeditor_t *wdg, int index)
 
   if(index >= 0 && index < wdg->buffer.length)
   {
-    return &wdg->buffer.memory[index];
+    return &wdg->buffer.string[index];
   }
 
   return &p;
@@ -186,11 +186,11 @@ esetcur(
     char *ptr = egetptr2(editor,old.xchar,cur.yline);
     if(cur.xchar > old.xchar)
     { for(int i=0;i<cur.xchar-old.xchar;i+=1)
-        inf += efont_code_xadv(editor->font,editor->text_size,ptr[i-0]);
+        inf += efont_code_xadv(editor->font,ptr[i-0]);
     } else
     if(cur.xchar < old.xchar)
     { for(int i=0;i>cur.xchar-old.xchar;i-=1)
-        inf -= efont_code_xadv(editor->font,editor->text_size,ptr[i-1]);
+        inf -= efont_code_xadv(editor->font,ptr[i-1]);
     }
   }
 
@@ -224,29 +224,29 @@ ecurchr(eeditor_t *wdg, int index, int off)
   return egetchr(wdg,ecurloc(wdg,index) + off);
 }
 
-erect_t
+Emu_rect_t
 ecurrec(
-  eeditor_t *wdg, int index, erect_t rect)
+  eeditor_t *wdg, int index, Emu_rect_t rect)
 {
+
   ecursor_t cur = egetcur(wdg,index);
-  emarker_t row = ebuffer_get_line_marker(&wdg->buffer,cur.yline);
+  emarker_t row = Emu_buffer_get_line_at_index(&wdg->buffer,cur.yline);
 
   int curchr = ecurchr(wdg,index,0);
 
-  /* #todo I'd probably want to support having different sized lines */
-  float y = (cur.yline - wdg->lyview) * wdg->line_height;
+  float y = (cur.yline - wdg->lyview) * wdg->font->line_height;
   float x = egetinf(wdg,index);
 
   /* #todo */
   int cur_xsize = rxmaxi(
-    efont_code_width(wdg->font,wdg->text_size,'.'),
-    efont_code_width(wdg->font,wdg->text_size,curchr));
+    efont_code_width(wdg->font,'.'),
+    efont_code_width(wdg->font,curchr));
 
-  y += wdg->text_size * .2;
+  y += wdg->font->char_height * .2;
 
-  float cursor_height = wdg->text_size * 1.2;
+  float cursor_height = wdg->font->char_height * 1.2;
 
-  return erect_xywh(rect.x0+x,rect.y1-y-wdg->line_height,cur_xsize,cursor_height);
+  return erect_xywh(rect.x0+x,rect.y1-y-wdg->font->line_height,cur_xsize,cursor_height);
 }
 
 ecursor_t
@@ -325,6 +325,7 @@ void
 ekey_one(
   eeditor_t *wdg, int key, int num, int chr, int cur)
 {
+
   ecursor_t cursor = egetcur(wdg,cur);
   int off = ecurloc(wdg,cur);
   int dir = 0;
@@ -344,6 +345,8 @@ ekey_one(
     case EDITOR_kMOVE_LEFT:
     case EDITOR_kMOVE_RIGHT:
     {
+      wdg->cursor_blink_timer = 0;
+
       dir = +1;
 
       if(key == EDITOR_kMOVE_LEFT)
@@ -383,6 +386,8 @@ ekey_one(
     case EDITOR_kDELETE_HERE:
     if( off >= 0 && off + num <= wdg->buffer.length)
     {
+      wdg->cursor_blink_timer = 0;
+
       char *ptr = egetptr(wdg,off);
 
       /* delete the entire line feed, as supposed to just breaking it */
@@ -396,11 +401,14 @@ ekey_one(
       /* gotta move the cursor first */
       emovcurx(wdg,cur,dir*num);
 
-      ebuffer_remove(&wdg->buffer,off,num);
-      ebuffer_update_lcache(&wdg->buffer);
+      Emu_buffer_remove(&wdg->buffer,off,num);
+      Emu_buffer_rescan_lines(&wdg->buffer);
+
     } break;
     case EDITOR_kCHAR:
     {
+      wdg->cursor_blink_timer = 0;
+
       /* we can handle this properly instead #todo */
       ccassert(
         chr != '\r' &&
@@ -444,7 +452,7 @@ ekey_one(
       {
         num = end!=0?2:1;
 
-        char *ptr = ebuffer_insert(&wdg->buffer,off,num);
+        char *ptr = Emu_buffer_insert(&wdg->buffer,off,num);
         ptr[0] = chr;
 
         if(end != 0)
@@ -452,7 +460,7 @@ ekey_one(
 
         /* notify of the event and then move the index */
         eaddchr_(wdg,off,num);
-        ebuffer_update_lcache(&wdg->buffer);
+        Emu_buffer_rescan_lines(&wdg->buffer);
       }
 
       emovcurx(wdg,cur,mov);
@@ -463,7 +471,7 @@ ekey_one(
       if(egetchr(wdg,off-1) == '{')
         num += 1;
 
-      char *ptr = ebuffer_insert(&wdg->buffer,off,num*2);
+      char *ptr = Emu_buffer_insert(&wdg->buffer,off,num*2);
 
       /* proper line end feed #todo */
       while(num -- != 0)
@@ -478,7 +486,7 @@ ekey_one(
       emovcury(wdg,cur,    1);
       esetcurx(wdg,cur,    0);
 
-      ebuffer_update_lcache(&wdg->buffer);
+      Emu_buffer_rescan_lines(&wdg->buffer);
     } break;
   }
 }
@@ -495,12 +503,13 @@ eeditor_load(
 
     if(memory != 0)
     {
-      ebuffer_uninit(&editor->buffer);
-      ebuffer_init(&editor->buffer,name,length);
+      Emu_buffer_uinit(&editor->buffer);
+      Emu_buffer_init(&editor->buffer,name,length);
 
-      memcpy(editor->buffer.memory,memory,length);
+      memcpy(editor->buffer.string,memory,length);
 
-      ebuffer_update_lcache(&editor->buffer);
+      Emu_buffer_rescan_lines(&editor->buffer);
+      Emu_buffer_update_colors(&editor->buffer);
     }
   }
 }
@@ -524,7 +533,7 @@ eeditor_unload(
 
       /* todo: convert indentations to white space here? */
       if(WriteFile(file,
-          editor->buffer.memory,
+          editor->buffer.string,
           editor->buffer.length,&length,0x00))
       {
         result = length == editor->buffer.length;
@@ -549,28 +558,27 @@ eeditor_msg(
 
   if(IS_CLICK_ENTER(0))
   {
-  	int xcursor = + rx.wnd.in.mice.xcursor;
-  	int ycursor = - rx.wnd.in.mice.ycursor + rx.wnd.size_y;
+   int xcursor = + rx.wnd.in.mice.xcursor;
+   int ycursor = - rx.wnd.in.mice.ycursor + rx.wnd.size_y;
 
-  	int yline = editor->lyview + ycursor / editor->line_height;
-  	ccdebuglog("%i",yline);
+   int yline = editor->lyview + ycursor / editor->font->line_height;
 
-  	emarker_t line = ebuffer_get_line_marker(&editor->buffer,yline);
-  	char *string = editor->buffer.memory + line.offset;
+   emarker_t line = Emu_buffer_get_line_at_index(&editor->buffer,yline);
+   char *string = editor->buffer.string + line.offset;
 
-  	float xwalk = 0;
-  	for(int xchar=0; xchar<line.length; xchar+=1)
-  	{
-  		float width = efont_code_xadv(editor->font,editor->text_size,string[xchar]);
+   float xwalk = 0;
+   for(int xchar=0; xchar<line.length; xchar+=1)
+   {
+      float width = efont_code_xadv(editor->font,string[xchar]);
 
-  		if(xcursor >= xwalk && xcursor <= xwalk + width)
-  		{
-  			esetcur(editor,0,(ecursor_t){xchar,yline});
-  			break;
-  		}
+      if(xcursor >= xwalk && xcursor <= xwalk + width)
+      {
+         esetcur(editor,0,(ecursor_t){xchar,yline});
+         break;
+      }
 
-  		xwalk += width;
-  	}
+      xwalk += width;
+   }
 
   } else
   if(rxisctrl() && rxtstkey('Z'))
@@ -611,7 +619,7 @@ eeditor_msg(
   {
     for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
-      emarker_t row = ebuffer_get_line_marker(&editor->buffer,egetcury(editor,i));
+      emarker_t row = Emu_buffer_get_line_at_index(&editor->buffer,egetcury(editor,i));
 
       int num = 1;
 
@@ -619,8 +627,8 @@ eeditor_msg(
       if((ptr[0]=='\r') &&
          (ptr[1]=='\n')) num += 1;
 
-      ebuffer_remove(&editor->buffer,row.offset,row.length+num);
-      ebuffer_update_lcache(&editor->buffer);
+      Emu_buffer_remove(&editor->buffer,row.offset,row.length+num);
+      Emu_buffer_rescan_lines(&editor->buffer);
     }
 
   } else

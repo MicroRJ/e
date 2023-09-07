@@ -20,28 +20,28 @@
 */
 
 /* todo: */
-void set_window_rect(HWND wnd, erect_t rect)
+void set_window_rect(HWND wnd, Emu_rect_t rect)
 {
   SetWindowPos(wnd,HWND_TOP,rect.x0,rect.y0,0,0,SWP_NOSIZE);
 }
 
 /* todo: */
-erect_t
+Emu_rect_t
 get_monitor_rect()
-{ erect_t rect = erect_xywh(0,0,
+{ Emu_rect_t rect = erect_xywh(0,0,
     GetSystemMetrics(SM_CXSCREEN),
     GetSystemMetrics(SM_CYSCREEN));
   return rect;
 }
 
 /* todo: */
-erect_t
+Emu_rect_t
 get_window_rect()
 {
   RECT wnd_rect;
   GetWindowRect(rx.wnd.win32.obj,&wnd_rect);
 
-  erect_t rect;
+  Emu_rect_t rect;
   rect = erect_xyxy(
       wnd_rect.  left, wnd_rect.   top,
       wnd_rect. right, wnd_rect.bottom );
@@ -49,9 +49,9 @@ get_window_rect()
   return rect;
 }
 
-erect_t get_window_client_rect()
+Emu_rect_t get_window_client_rect()
 {
-  erect_t rect;
+  Emu_rect_t rect;
   rect = erect_xywh(0,0,rx.wnd.size_x,rx.wnd.size_y);
   return rect;
 }

@@ -19,30 +19,29 @@
 **
 */
 
-/* implementation */
 void
-ebuffer_init(
+Emu_buffer_init(
   ebuffer_t *buffer, char const *tag, cci64_t length)
 {
-  ZeroMemory(buffer,sizeof(*buffer));
+   ZeroMemory(buffer,sizeof(*buffer));
 
-  buffer->tag = estring_copy(tag);
+   buffer->tag = estring_copy(tag);
 
-  if(length)
-  {
-    ebuffer_manage(buffer,length,length);
-  }
+   if(length) {
 
-  /* todo: this should be passed in */
-  esyntax_init(&buffer->syntax);
+      Emu_buffer_reserve_and_commit(buffer,length,length);
+   }
+
+   /* todo: this should be passed in */
+   esyntax_init(&buffer->syntax);
 }
 
 void
-ebuffer_uninit(
+Emu_buffer_uinit(
   ebuffer_t *buffer)
 {
-  ememory_release_aligned(buffer->memory);
-  ememory_release_aligned(buffer->colors);
+  Emu_memory_release_aligned(buffer->string);
+  Emu_memory_release_aligned(buffer->colors);
   buffer->length = 0;
   buffer->extent = 0;
 
@@ -51,7 +50,7 @@ ebuffer_uninit(
 }
 
 char *
-ebuffer_manage(
+Emu_buffer_reserve_and_commit(
   ebuffer_t *buffer, cci64_t reserve, cci64_t commit)
 {
   ccassert(commit <= reserve + buffer->extent - buffer->length);
@@ -66,26 +65,26 @@ ebuffer_manage(
       buffer->extent = buffer->length + reserve;
     }
 
-    buffer->memory = ememory_realloc_aligned(sizeof(*buffer->memory) * buffer->extent, buffer->memory);
-    buffer->colors = ememory_realloc_aligned(sizeof(*buffer->colors) * buffer->extent, buffer->colors);
+    buffer->string = Emu_memory_realloc_aligned(sizeof(*buffer->string) * buffer->extent, buffer->string);
+    buffer->colors = Emu_memory_realloc_aligned(sizeof(*buffer->colors) * buffer->extent, buffer->colors);
   }
 
   buffer->length = buffer->length + commit;
 
-  return buffer->memory + buffer->length;
+  return buffer->string + buffer->length;
 }
 
 char *
-ebuffer_insert(
+Emu_buffer_insert(
   ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
-  ebuffer_manage(buffer,length,length);
+  Emu_buffer_reserve_and_commit(buffer,length,length);
 
   if(offset != buffer->length)
   {
     memmove(
-      buffer->memory+offset+length,
-      buffer->memory+offset,
+      buffer->string+offset+length,
+      buffer->string+offset,
       buffer->length-offset-length);
 
     memmove(
@@ -94,18 +93,18 @@ ebuffer_insert(
       buffer->length-offset-length);
   }
 
-  return buffer->memory+offset;
+  return buffer->string+offset;
 }
 
 void
-ebuffer_remove(
+Emu_buffer_remove(
   ebuffer_t *buffer, cci64_t offset, cci64_t length)
 {
   if(offset != buffer->length)
   {
     memmove(
-      buffer->memory+offset,
-      buffer->memory+offset+length,
+      buffer->string+offset,
+      buffer->string+offset+length,
       buffer->length-offset-length);
 
     memmove(
@@ -120,7 +119,7 @@ ebuffer_remove(
 
 
 ccinle emarker_t
-ebuffer_get_line_marker(
+Emu_buffer_get_line_at_index(
   ebuffer_t *buffer, int index)
 {
   /* remove, this should not happen? */
@@ -139,37 +138,36 @@ ccinle int
 ebuffer_get_line_offset(
   ebuffer_t *buffer, int yline)
 {
-  return ebuffer_get_line_marker(buffer,yline).offset;
+  return Emu_buffer_get_line_at_index(buffer,yline).offset;
 }
 
 ccinle int
 ebuffer_get_line_length(
   ebuffer_t *buffer, int yline)
 {
-  return ebuffer_get_line_marker(buffer,yline).length;
+  return Emu_buffer_get_line_at_index(buffer,yline).length;
 }
 
-/* this should be done automatically #todo */
 void
-ebuffer_update_lcache(
+Emu_buffer_update_colors(
+   ebuffer_t *buffer)
+{
+   esample_t sample;
+   for(int i=0; i<buffer->length; i += sample.width)
+   {
+      sample = buffer->syntax.sampler(&buffer->syntax,NULL,0,buffer->length,buffer->string+i);
+      memset(buffer->colors+i,sample.token,sample.width);
+   }
+}
+/* could this be done automatically #todo */
+void
+Emu_buffer_rescan_lines(
   ebuffer_t *buffer)
 {
 
-  for(int i=0; i<buffer->length;)
-  {
-  	esample_t sample =
-  		buffer->syntax.sampler(&buffer->syntax,NULL,0,
-  			buffer->length,buffer->memory+i);
 
-		for(int j=0;j<sample.width;j+=1)
-		{
-			buffer->colors[i+j] = sample.token;
-		}
 
-		i += sample.width;
-  }
-
-  char *cursor = buffer->memory;
+  char *cursor = buffer->string;
 
   /* todo */
   earray_delete(buffer->lcache);
@@ -180,15 +178,15 @@ ebuffer_update_lcache(
   for(;;)
   {
     emarker_t *line = earray_add(buffer->lcache,1);
-    line->offset = (cursor - buffer->memory);
+    line->offset = (cursor - buffer->string);
 
-    while((cursor < buffer->memory + buffer->length) &&
+    while((cursor < buffer->string + buffer->length) &&
           (*cursor != '\r') &&
           (*cursor != '\n')) cursor += 1;
 
-    line->length = (cursor - buffer->memory) - line->offset;
+    line->length = (cursor - buffer->string) - line->offset;
 
-    if(cursor < buffer->memory + buffer->length)
+    if(cursor < buffer->string + buffer->length)
     {
       cursor += ((cursor[0] == '\r') &&
                  (cursor[1] == '\n'))  ? 2 : 1;
@@ -198,5 +196,5 @@ ebuffer_update_lcache(
     }
   }
 
-  ccassert(cursor == buffer->memory + buffer->length);
+  ccassert(cursor == buffer->string + buffer->length);
 }

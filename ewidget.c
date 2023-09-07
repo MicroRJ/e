@@ -19,70 +19,68 @@
 **
 */
 
-
 int
-ewdg(erect_t rect, eeditor_t *widget)
+Emu_widget_render(Emu_widget_t *widget, Emu_rect_t rect)
 {
-  int in_rect = cursor_in_rect(rect);
+  	int in_rect = cursor_in_rect(rect);
 
-  if(IS_CLICK_ENTER(0))
-  {
-    if(in_rect)
-    {
-      widget->widget.focused = cctrue;
-    }
-  }
+  	eeditor_t *editor = widget;
 
-  if(widget->widget.focused)
-  {
-    eeditor_msg(widget);
-  }
+	if (widget->cursor_blink_speed_in_seconds == 0) {
+		widget->cursor_blink_speed_in_seconds = .500;
+	}
 
+	Emu_glyph_font_t *font = editor->font;
 
-  /* drawing */
-  set_clip_rect(rect);
+	eeditor_msg(editor);
 
+	double animation = .5 + .5 * sin(rxPI_F * widget->cursor_blink_timer / widget->cursor_blink_speed_in_seconds);
 
-  if(widget->widget.focused)
-  {
-    double animation = .5 + .5 * sin(rxPI_F * rx.total_seconds/.250);
-    /* todo */
-    rxcolor_t color = RX_RGBA_UNORM(148,232,148,255);
-    color.a = rxclamp(animation,.1,.8);
+	widget->cursor_blink_timer += rx.delta_seconds;
 
-    for(int i=0;i<ccarrlen(widget->cursor);i+=1)
-    {
-      erect_t cur_rec = ecurrec(widget,i,rect);
+	/* todo */
+	rxcolor_t color = RX_RGBA_UNORM(148,232,148,255);
+	color.a = rxclamp(animation,.1,.8);
 
-      /* this function should just take an e-rect */
-      EMU_imp_rect_sdf(
-        rxvec2_xy(
-          cur_rec.x0 + (cur_rec.x1 - cur_rec.x0) * .5,
-          cur_rec.y0 + (cur_rec.y1 - cur_rec.y0) * .5),
-        rxvec2_xy(
-          .5*(cur_rec.x1-cur_rec.x0),
-          .5*(cur_rec.y1-cur_rec.y0)) , color, 2.5, 1.);
-    }
-  }
+	for(int i=0;i<ccarrlen(editor->cursor);i+=1)
+	{
+		Emu_rect_t cur_rec = ecurrec(editor,i,rect);
 
-  for(int i=0; i<rxmini(earray_length(widget->buffer.lcache) - widget->lyview,64); i += 1)
-  {
-    emarker_t *line = widget->buffer.lcache + widget->lyview + i;
+		/* this function should just take an e-rect */
+		Emu_imp_rect_sdf(
+		  rxvec2_xy(
+		    cur_rec.x0 + (cur_rec.x1 - cur_rec.x0) * .5,
+		    cur_rec.y0 + (cur_rec.y1 - cur_rec.y0) * .5),
+		  rxvec2_xy(
+		    .5*(cur_rec.x1-cur_rec.x0),
+		    .5*(cur_rec.y1-cur_rec.y0)) , color, 2.5, 1.);
+	}
 
-    EMU_draw_text_config_t config =
-			draw_text_config_init(widget->font,widget->text_size,
-				0,0,RX_RGBA(0,0,0,0),NULL,NULL,line->length,NULL);
-		config.color_table = widget->buffer.syntax.color_table;
-		config.color_array = widget->buffer.colors + line->offset;
-		config.string      = widget->buffer.memory + line->offset;
-    config.x           = rect.x0;
-    config.y           = rect.y1 - (widget->line_height) * (1 + i);
+	ebuffer_t buffer = editor->buffer;
 
-		edraw_text( &config );
-  }
+   Emu_font_text_config_t config;
+   ZeroMemory(&config,sizeof(config));
+   config.font = font;
+   config.x = rect.x0;
+   config.y = rect.y1 - font->line_height;
+   config.char_height = font->char_height;
+   config.line_height = font->line_height;
+   config.tab_size = 2; /* in spaces */
+   config.color = RX_RGBA(0,0,0,0);
+   config.color_table = buffer.syntax.color_table;
+   config.length = buffer.length;
+   config.string = buffer.memory;
+   config.colors = buffer.colors;
+   config.line_array = buffer.lcache + editor->lyview;
+   config.line_count = (rect.y1 - rect.y0) / editor->font->line_height + 1;
 
-  set_clip_rect(RECT_HUGE);
-  return ccfalse;
+   if(config.line_count > ccarrlen(buffer.lcache)) {
+      config.line_count = ccarrlen(buffer.lcache);
+   }
+
+   Emu_draw_text( &config );
+
+   return ccfalse;
 }
 
 
