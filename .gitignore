@@ -1,6 +1,6 @@
 .vs
+.vscode/*
 *.exe
 *.pdb
-*.asm
 *.obj
-freetype
+*.asm
