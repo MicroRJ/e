@@ -9,9 +9,9 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	rlInitWithWindow(L"e");
+	rxInitWindowed(L"e");
 
-	rlFont *font = rlLoadFontFaceFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
+	rxFont *font = rxLoadFontFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
 	eeditor_t editor;
 	ZeroMemory(&editor,sizeof(editor));

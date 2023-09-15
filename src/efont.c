@@ -175,7 +175,7 @@ Emu_search_or_create_glyph_bucket( int width, int height, int *x, int *y )
 }
 
 Emu_glyph_t *
-Emu_search_or_create_glyph( rlFont *font, int utf32 )
+Emu_search_or_create_glyph( rxFont *font, int utf32 )
 {
 	/* todo */
 	for each_in(Emu_glyph_t **, it_, font->glyph_table) {
@@ -271,7 +271,7 @@ Emu_search_or_create_glyph( rlFont *font, int utf32 )
 
 float
 EMU_font_get_kerning(
-rlFont *font, char prev_char, char curr_char )
+rxFont *font, char prev_char, char curr_char )
 {
 	float result = .0;
 
@@ -295,7 +295,7 @@ rlFont *font, char prev_char, char curr_char )
 void
 Emu_draw_text( Emu_font_text_config_t *config )
 {
-	rlFont *font = config->font;
+	rxFont *font = config->font;
 
 	/* setup emu::imp */
 	int mode = EMU_IMP_MODE_2D;
@@ -428,8 +428,8 @@ Emu_draw_text( Emu_font_text_config_t *config )
 	}
 }
 
-rlFont *
-rlLoadFontFaceFromFile(
+rxFont *
+rxLoadFontFile(
 char const *fpath, float height)
 {
 
@@ -451,7 +451,7 @@ char const *fpath, float height)
 	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
 	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
 
-	rlFont *font = ccmalloc_T(rlFont);
+	rxFont *font = ccmalloc_T(rxFont);
 
 	font->is_subpixel = TRUE;
 	font->is_sdf = FALSE;
@@ -470,7 +470,7 @@ char const *fpath, float height)
 /* todo: support for kerning */
 ccinle float
 efont_code_xadv(
-rlFont *font, int code)
+rxFont *font, int code)
 {
 	// return 0;
 	Emu_glyph_t *glyph = Emu_search_or_create_glyph(font,code);
@@ -485,7 +485,7 @@ rlFont *font, int code)
 
 ccinle float
 efont_code_width(
-rlFont *font, int code)
+rxFont *font, int code)
 {
 	// return 0;
 	Emu_glyph_t *glyph = Emu_search_or_create_glyph(font,code);

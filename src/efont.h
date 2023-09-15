@@ -139,15 +139,15 @@ typedef struct
 	{
 		stbtt_fontinfo face;
 	} stb;
-} rlFont;
+} rxFont;
 
-rlFont *
-rlLoadFontFaceFromFile(
+rxFont *
+rxLoadFontFile(
   char const *fpath, float char_height);
 
 struct {
 
-	rlFont **fonts;
+	rxFont **fonts;
 	Emu_glyph_pallet_t **pallets;
 
 } ccglobal emu_Font_Library;
@@ -163,7 +163,7 @@ typedef struct
 	or this becomes a separate file #pending */
 typedef struct
 {
-	rlFont *font;
+	rxFont *font;
 	float             x,y;
 
 	int tab_size; /* in spaces */

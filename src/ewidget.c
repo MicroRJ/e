@@ -30,7 +30,7 @@ Emu_widget_render(Emu_widget_t *widget, rlWindowBox rect)
 		widget->cursor_blink_speed_in_seconds = .500;
 	}
 
-	rlFont *font = editor->font;
+	rxFont *font = editor->font;
 
 	eeditor_msg(editor);
 
