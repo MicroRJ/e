@@ -31,9 +31,6 @@ Emu_buffer_init(
 
       Emu_buffer_reserve_and_commit(buffer,length,length);
    }
-
-   /* todo: this should be passed in */
-   esyntax_init(&buffer->syntax);
 }
 
 void
@@ -148,17 +145,6 @@ ebuffer_get_line_length(
   return Emu_buffer_get_line_at_index(buffer,yline).length;
 }
 
-void
-Emu_buffer_update_colors(
-   ebuffer_t *buffer)
-{
-   esample_t sample;
-   for(int i=0; i<buffer->length; i += sample.width)
-   {
-      sample = buffer->syntax.sampler(&buffer->syntax,NULL,0,buffer->length,buffer->string+i);
-      memset(buffer->colors+i,sample.token,sample.width);
-   }
-}
 /* could this be done automatically #todo */
 void
 Emu_buffer_rescan_lines(

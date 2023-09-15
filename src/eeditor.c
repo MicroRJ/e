@@ -509,7 +509,6 @@ eeditor_load(
       memcpy(editor->buffer.string,memory,length);
 
       Emu_buffer_rescan_lines(&editor->buffer);
-      Emu_buffer_update_colors(&editor->buffer);
     }
   }
 }
@@ -552,9 +551,9 @@ void
 eeditor_msg(
   eeditor_t *editor)
 {
-  ekey_one(editor,EDITOR_kMOD_CONTROL,0,rlIsCtrlKey(),0);
-  ekey_one(editor,EDITOR_kMOD_ALT,0,rxismenu(),0);
-  ekey_one(editor,EDITOR_kMOD_SHIFT,0,rxisshft(),0);
+  ekey_one(editor,EDITOR_kMOD_CONTROL,0,rxIsCtrlKey(),0);
+  ekey_one(editor,EDITOR_kMOD_ALT,0,rxIsMenuKey(),0);
+  ekey_one(editor,EDITOR_kMOD_SHIFT,0,rxIsShiftKey(),0);
 
   if(IS_CLICK_ENTER(0))
   {
@@ -581,7 +580,7 @@ eeditor_msg(
    }
 
   } else
-  if(rlIsCtrlKey() && rxtstkey('Z'))
+  if(rxIsCtrlKey() && rxTestKey('Z'))
   {
     eevent_t event = epopevn(editor);
 
@@ -593,7 +592,7 @@ eeditor_msg(
     }
 
   } else
-  if(rxtstkey(rx_kESCAPE))
+  if(rxTestKey(rx_kESCAPE))
   {
     /* todo */
     ccdlb_t *dlb = ccdlb(editor->cursor);
@@ -603,19 +602,19 @@ eeditor_msg(
   if(rx.wnd.in.mice.yscroll != 0)
   {
     /* scroll up */
-    editor->lyview += rxisshft() ? 16 : - rx.wnd.in.mice.yscroll;
+    editor->lyview += rxIsShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
     editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
   } else
-  if(rxtstkey(rx_kHOME))
+  if(rxTestKey(rx_kHOME))
   {
     ekey_all(editor,EDITOR_kMOVE_LINE_LEFT,1,0);
 
   } else
-  if(rxtstkey(rx_kEND))
+  if(rxTestKey(rx_kEND))
   {
     ekey_all(editor,EDITOR_kMOVE_LINE_RIGHT,1,0);
   } else
-  if(rlIsCtrlKey() && rxtstkey('X'))
+  if(rxIsCtrlKey() && rxTestKey('X'))
   {
     for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
@@ -632,18 +631,18 @@ eeditor_msg(
     }
 
   } else
-  if(rxtstkey(rx_kKEY_UP))
+  if(rxTestKey(rx_kKEY_UP))
   {
-    if(rlIsCtrlKey() && rxismenu())
+    if(rxIsCtrlKey() && rxIsMenuKey())
     {
       ecursor_t cur = egetcur(editor,0);
       cur.yline -= 1;
       eaddcur(editor,cur);
     } else
-    if(rlIsCtrlKey())
+    if(rxIsCtrlKey())
     {
       /* scroll up */
-      editor->lyview -= rxisshft() ? 16 : 1;
+      editor->lyview -= rxIsShiftKey() ? 16 : 1;
       editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
@@ -652,18 +651,18 @@ eeditor_msg(
         emovcury(editor,i,-1);
     }
   } else
-  if(rxtstkey(rx_kKEY_DOWN))
+  if(rxTestKey(rx_kKEY_DOWN))
   {
-    if(rlIsCtrlKey() && rxismenu())
+    if(rxIsCtrlKey() && rxIsMenuKey())
     {
       ecursor_t cur = egetcur(editor,ecurnum(editor)-1);
       cur.yline += 1;
       eaddcur(editor,cur);
     } else
-    if(rlIsCtrlKey())
+    if(rxIsCtrlKey())
     {
       /* scroll down */
-      editor->lyview += rxisshft() ? 16 : 1;
+      editor->lyview += rxIsShiftKey() ? 16 : 1;
       editor->lyview = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
@@ -672,24 +671,24 @@ eeditor_msg(
         emovcury(editor,i,+1);
     }
   } else
-  if(rxtstkey(rx_kKEY_LEFT))
+  if(rxTestKey(rx_kKEY_LEFT))
   { ekey_all(editor,EDITOR_kMOVE_LEFT,   1,0);
   } else
-  if(rxtstkey(rx_kKEY_RIGHT))
+  if(rxTestKey(rx_kKEY_RIGHT))
   {
     ekey_all(editor,EDITOR_kMOVE_RIGHT, 1,0);
   } else
-  if(rxtstkey(rx_kDELETE))
+  if(rxTestKey(rx_kDELETE))
   { ekey_all(editor,EDITOR_kDELETE_HERE,1,0);
   } else
-  if(rxtstkey(rx_kBCKSPC))
+  if(rxTestKey(rx_kBCKSPC))
   { ekey_all(editor,EDITOR_kDELETE_BACK,1,0);
   } else
-  if(rxtstkey(rx_kRETURN))
+  if(rxTestKey(rx_kRETURN))
   {
     ekey_all(editor,EDITOR_kLINE,1,0);
   } else
-  { if(!rlIsCtrlKey())
+  { if(!rxIsCtrlKey())
     {
       if(rxchr() != 0)
       {

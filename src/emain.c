@@ -30,34 +30,34 @@ int main(int argc, char **argv)
 	{
 
 #if 1
-		if(rxtstkey(rx_kKEY_F5))
+		if(rxTestKey(rx_kKEY_F5))
 		{
 			RunCommandString("build.msvc.template.bat e TRUE");
 		} else
-		if(rxtstkey(rx_kKEY_F1))
+		if(rxTestKey(rx_kKEY_F1))
 		{
 			eeditor_unload(&editor,editor.buffer.tag);
 		} else
-		if(rxtstkey(rx_kKEY_F7))
+		if(rxTestKey(rx_kKEY_F7))
 		{ debug_overlay = !debug_overlay;
 		} else
-		if(rxtstkey(rx_kKEY_F9))
+		if(rxTestKey(rx_kKEY_F9))
 		{
 		} else
-		if(rlIsCtrlKey() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_UP))
+		if(rxIsCtrlKey() && rxIsMenuKey() && rxIsShiftKey() && rxTestKey(rx_kKEY_UP))
 		{
 		} else
-		if(rlIsCtrlKey() && rxismenu() && rxisshft() && rxtstkey(rx_kKEY_DOWN))
+		if(rxIsCtrlKey() && rxIsMenuKey() && rxIsShiftKey() && rxTestKey(rx_kKEY_DOWN))
 		{
 		} else
-		if(rlIsCtrlKey() && rxtstkey('P'))
+		if(rxIsCtrlKey() && rxTestKey('P'))
 		{
 			searching = !searching;
 		} else
-		if(rlIsCtrlKey() && rxtstkey('O'))
+		if(rxIsCtrlKey() && rxTestKey('O'))
 		{ eeditor_load(&editor,fdlg());
 		} else
-		if(rlIsCtrlKey() && rxtstkey('S'))
+		if(rxIsCtrlKey() && rxTestKey('S'))
 		{ eeditor_unload(&editor,fdlg());
 		} else
 		{

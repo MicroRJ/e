@@ -35,9 +35,8 @@ typedef struct
    unsigned char  *colors;
    union  {
    void           *memory;
-   char           *string; };
-
-   esyntax_t       syntax;
+   char           *string;
+};
 
    int           modified;
    meow_u128     checksum;
@@ -53,7 +52,6 @@ typedef struct
    char       * memory;
    char       * colors;
    int          length;
-   esyntax_t  * syntax;
 } ebuffer_config_t;
 
 /* don't like this init function #todo */

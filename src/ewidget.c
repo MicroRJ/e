@@ -67,7 +67,7 @@ Emu_widget_render(Emu_widget_t *widget, rlWindowBox rect)
    config.line_height = font->line_height;
    config.tab_size = 2; /* in spaces */
    config.color = RX_RGBA(0,0,0,0);
-   config.color_table = buffer.syntax.color_table;
+   config.color_table = 0;
    config.length = buffer.length;
    config.string = buffer.memory;
    config.colors = buffer.colors;

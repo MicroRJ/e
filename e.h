@@ -47,18 +47,15 @@ void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float r
 
 #include   <src/erect.c>
 #include <src/esystem.c>
-#include   <src/efile.c>
 #include <src/ememory.c>
 #include  <src/earray.c>
 #include <src/estring.c>
-#include <src/esyntax.h>
 #include   <src/efont.h>
 #include   <src/efont.c>
 #include <src/ebuffer.h>
 #include <src/ebuffer.c>
 #include <src/eeditor.h>
 #include <src/ewidget.h>
-#include <src/esyntax.c>
 #include <src/ewidget.c>
 #include <src/eeditor.c>
 
