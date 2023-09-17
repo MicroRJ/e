@@ -133,11 +133,11 @@ eeditor_t *, int, int off);
 char *
 ecurptr(
 eeditor_t *, int);
-rlWindowBox
+rlBOX
 ecurrec(
 eeditor_t *, int,
 /* this is temporary, the widget should store this? */
-rlWindowBox);
+rlBOX);
 
 char *
 egetptr(

@@ -19,7 +19,7 @@
 **
 */
 
-typedef union rlWindowBox {
+typedef union rlBOX {
 	struct {
 		rxvec2_t xy0;
 		rxvec2_t xy1;
@@ -27,7 +27,7 @@ typedef union rlWindowBox {
 	struct {
 		float x0,y0,x1,y1;
 	};
-} rlWindowBox;
+} rlBOX;
 
 enum {
 	RECT_kLFT,
@@ -36,9 +36,9 @@ enum {
 	RECT_kBOT
 };
 
-rlWindowBox
+rlBOX
 rlMakeBox(float x0, float y0, float x1, float y1) {
-	rlWindowBox rect;
+	rlBOX rect;
 	rect.x0 = x0; rect.x1 = x1;
 	rect.y0 = y0; rect.y1 = y1;
 
@@ -47,15 +47,15 @@ rlMakeBox(float x0, float y0, float x1, float y1) {
 	return rect;
 }
 
-rlWindowBox
+rlBOX
 rlMakeBoxBySize(float x, float y, float xx, float yy)	{
 	return rlMakeBox(x,y,x+xx,y+yy);
 }
 
 /* todo: remove */
-rlWindowBox
-rlBoxCut(rlWindowBox *wndBox, int mode, float size) {
-	rlWindowBox result = rlMakeBoxBySize(0,0,0,0);
+rlBOX
+rlBoxCut(rlBOX *wndBox, int mode, float size) {
+	rlBOX result = rlMakeBoxBySize(0,0,0,0);
 	switch(mode) {
 		case RECT_kTOP:{
 			result = rlMakeBox(wndBox->x0,wndBox->y1-size,wndBox->x1,wndBox->y1);
@@ -79,16 +79,16 @@ rlBoxCut(rlWindowBox *wndBox, int mode, float size) {
 
 
 float
-rect_in_xy(rlWindowBox rect, float x, float y) {
+rect_in_xy(rlBOX rect, float x, float y) {
 	return
 	((x >= rect.x0) && (y >= rect.y0)) &&
 	((x <  rect.x1) && (y <  rect.y1));
 }
 
-rlWindowBox
-rect_center(rlWindowBox parent, rlWindowBox child)
+rlBOX
+rect_center(rlBOX parent, rlBOX child)
 {
-	rlWindowBox result;
+	rlBOX result;
 	result.x0 = parent.x0 + ((parent.x1 - parent.x0) * .5) - ((child.x1 - child.x0) * .5);
 	result.y0 = parent.y0 + ((parent.y1 - parent.y0) * .5) - ((child.y1 - child.y0) * .5);
 	result.x1 = result.x0 + (child.x1 - child.x0);
@@ -96,8 +96,8 @@ rect_center(rlWindowBox parent, rlWindowBox child)
 	return result;
 }
 
-rlWindowBox
-rect_padd(rlWindowBox rect, float xpadd, float ypadd)
+rlBOX
+rect_padd(rlBOX rect, float xpadd, float ypadd)
 {
 	return
 	rlMakeBox(

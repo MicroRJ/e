@@ -20,7 +20,7 @@
 */
 
 int
-Emu_widget_render(Emu_widget_t *widget, rlWindowBox rect)
+Emu_widget_render(Emu_widget_t *widget, rlBOX rect)
 {
   	int in_rect = cursor_in_rect(rect);
 
@@ -44,7 +44,7 @@ Emu_widget_render(Emu_widget_t *widget, rlWindowBox rect)
 
 	for(int i=0;i<ccarrlen(editor->cursor);i+=1)
 	{
-		rlWindowBox cur_rec = ecurrec(editor,i,rect);
+		rlBOX cur_rec = ecurrec(editor,i,rect);
 
 		/* this function should just take an e-rect */
 		Emu_imp_rect_sdf(

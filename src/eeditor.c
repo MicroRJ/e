@@ -224,9 +224,9 @@ ecurchr(eeditor_t *wdg, int index, int off)
   return egetchr(wdg,ecurloc(wdg,index) + off);
 }
 
-rlWindowBox
+rlBOX
 ecurrec(
-  eeditor_t *wdg, int index, rlWindowBox rect)
+  eeditor_t *wdg, int index, rlBOX rect)
 {
 
   ecursor_t cur = egetcur(wdg,index);

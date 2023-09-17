@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 		{ eeditor_unload(&editor,fdlg());
 		} else
 		{
-			rlWindowBox r = rlGetWindowClientBox();
+			rlBOX r = rlGetWindowClientBox();
 			draw_rect(r,RX_RGBA_UNORM(8,36,36,255));
 
 			if(Emu_widget_render(&editor,r))
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 
 			for(int i=0; i<1; i+=1)
 			{
-				rlWindowBox f = rlBoxCut(&r,RECT_kBOT,22.);
+				rlBOX f = rlBoxCut(&r,RECT_kBOT,22.);
 				draw_rect(f,RX_RGBA_UNORM(122,104,81,255));
 
 				draw_single_text_line(editor.font,f.x0,f.y0,
