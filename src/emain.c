@@ -9,9 +9,9 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	rxInitWindowed(L"e");
+	rlInitWindowed(L"e");
 
-	rxFont *font = rxLoadFontFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
+	rlFont *font = rlFont_loadFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
 	eeditor_t editor;
 	ZeroMemory(&editor,sizeof(editor));
@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 
 	eeditor_load(&editor,"todo.txt");
 
-  // Emu_texture_t *glyphTexture = editor.font.glyphAtlas;
+  // rlTexture *glyphTexture = editor.font.glyphAtlas;
 
 	int debug_overlay = 0;
 	int searching = 0;
@@ -30,39 +30,39 @@ int main(int argc, char **argv)
 	{
 
 #if 1
-		if(rxTestKey(rx_kKEY_F5))
+		if(rlIO_testKey(rx_kKEY_F5))
 		{
 			RunCommandString("build.msvc.template.bat e TRUE");
 		} else
-		if(rxTestKey(rx_kKEY_F1))
+		if(rlIO_testKey(rx_kKEY_F1))
 		{
 			eeditor_unload(&editor,editor.buffer.tag);
 		} else
-		if(rxTestKey(rx_kKEY_F7))
+		if(rlIO_testKey(rx_kKEY_F7))
 		{ debug_overlay = !debug_overlay;
 		} else
-		if(rxTestKey(rx_kKEY_F9))
+		if(rlIO_testKey(rx_kKEY_F9))
 		{
 		} else
-		if(rxIsCtrlKey() && rxIsMenuKey() && rxIsShiftKey() && rxTestKey(rx_kKEY_UP))
+		if(rlIO_testCtrlKey() && rlIO_testMenuKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_UP))
 		{
 		} else
-		if(rxIsCtrlKey() && rxIsMenuKey() && rxIsShiftKey() && rxTestKey(rx_kKEY_DOWN))
+		if(rlIO_testCtrlKey() && rlIO_testMenuKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_DOWN))
 		{
 		} else
-		if(rxIsCtrlKey() && rxTestKey('P'))
+		if(rlIO_testCtrlKey() && rlIO_testKey('P'))
 		{
 			searching = !searching;
 		} else
-		if(rxIsCtrlKey() && rxTestKey('O'))
+		if(rlIO_testCtrlKey() && rlIO_testKey('O'))
 		{ eeditor_load(&editor,fdlg());
 		} else
-		if(rxIsCtrlKey() && rxTestKey('S'))
+		if(rlIO_testCtrlKey() && rlIO_testKey('S'))
 		{ eeditor_unload(&editor,fdlg());
 		} else
 		{
 			rlBOX r = rlGetWindowClientBox();
-			draw_rect(r,RX_RGBA_UNORM(8,36,36,255));
+			rlDrawRect(r,RX_RGBA_UNORM(8,36,36,255));
 
 			if(Emu_widget_render(&editor,r))
 			{
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 			for(int i=0; i<1; i+=1)
 			{
 				rlBOX f = rlBoxCut(&r,RECT_kBOT,22.);
-				draw_rect(f,RX_RGBA_UNORM(122,104,81,255));
+				rlDrawRect(f,RX_RGBA_UNORM(122,104,81,255));
 
 				draw_single_text_line(editor.font,f.x0,f.y0,
 				ccformat("%i,%i %s (%i/%i) %s @%f %f",

@@ -51,7 +51,7 @@ typedef struct
 
 /* #todo */
 ccfunc ccinle void
-Emu_memcpy2d( Emu_memcpy2d_config_t *config )
+rlMem_copy2d( Emu_memcpy2d_config_t *config )
 {
   for (int y = 0; y < config->src.height; y += 1)
   {

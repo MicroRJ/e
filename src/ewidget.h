@@ -40,7 +40,7 @@ int is_click_enter_rect(rlBOX rect)
 }
 
 void
-draw_rect(rlBOX rect, rxcolor_t color)
+rlDrawRect(rlBOX rect, rxcolor_t color)
 {
   Emu_imp_rect(color,
     rect.x0, rect.y0,

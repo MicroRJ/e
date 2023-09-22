@@ -87,8 +87,8 @@ eaddcur(
   eeditor_t *editor, ecursor_t cur)
 {
   /* todo: make this better */
-  *ccarradd(editor->cursor,1) = cur;
-  *ccarradd(editor->curinf,1) = 0;
+  *rlArray_add(editor->cursor,1) = cur;
+  *rlArray_add(editor->curinf,1) = 0;
 
   esrtcur(editor);
   return efndcur(editor,cur.xchar,cur.yline);
@@ -294,7 +294,7 @@ eaddchr_(
     /* if there's no event do not store */
     if(wdg->event.type != EDITOR_kNONE)
     {
-      *ccarradd(wdg->trail,1) = wdg->event;
+      *rlArray_add(wdg->trail,1) = wdg->event;
     }
 
     wdg->event.type   = EDITOR_kCHAR;
@@ -551,9 +551,9 @@ void
 eeditor_msg(
   eeditor_t *editor)
 {
-  ekey_one(editor,EDITOR_kMOD_CONTROL,0,rxIsCtrlKey(),0);
-  ekey_one(editor,EDITOR_kMOD_ALT,0,rxIsMenuKey(),0);
-  ekey_one(editor,EDITOR_kMOD_SHIFT,0,rxIsShiftKey(),0);
+  ekey_one(editor,EDITOR_kMOD_CONTROL,0,rlIO_testCtrlKey(),0);
+  ekey_one(editor,EDITOR_kMOD_ALT,0,rlIO_testMenuKey(),0);
+  ekey_one(editor,EDITOR_kMOD_SHIFT,0,rlIO_testShiftKey(),0);
 
   if(IS_CLICK_ENTER(0))
   {
@@ -580,7 +580,7 @@ eeditor_msg(
    }
 
   } else
-  if(rxIsCtrlKey() && rxTestKey('Z'))
+  if(rlIO_testCtrlKey() && rlIO_testKey('Z'))
   {
     eevent_t event = epopevn(editor);
 
@@ -592,7 +592,7 @@ eeditor_msg(
     }
 
   } else
-  if(rxTestKey(rx_kESCAPE))
+  if(rlIO_testKey(rx_kESCAPE))
   {
     /* todo */
     ccdlb_t *dlb = ccdlb(editor->cursor);
@@ -602,19 +602,19 @@ eeditor_msg(
   if(rx.wnd.in.mice.yscroll != 0)
   {
     /* scroll up */
-    editor->lyview += rxIsShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
+    editor->lyview += rlIO_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
     editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
   } else
-  if(rxTestKey(rx_kHOME))
+  if(rlIO_testKey(rx_kHOME))
   {
     ekey_all(editor,EDITOR_kMOVE_LINE_LEFT,1,0);
 
   } else
-  if(rxTestKey(rx_kEND))
+  if(rlIO_testKey(rx_kEND))
   {
     ekey_all(editor,EDITOR_kMOVE_LINE_RIGHT,1,0);
   } else
-  if(rxIsCtrlKey() && rxTestKey('X'))
+  if(rlIO_testCtrlKey() && rlIO_testKey('X'))
   {
     for(int i=ecurnum(editor)-1;i>=0;i-=1)
     {
@@ -631,18 +631,18 @@ eeditor_msg(
     }
 
   } else
-  if(rxTestKey(rx_kKEY_UP))
+  if(rlIO_testKey(rx_kKEY_UP))
   {
-    if(rxIsCtrlKey() && rxIsMenuKey())
+    if(rlIO_testCtrlKey() && rlIO_testMenuKey())
     {
       ecursor_t cur = egetcur(editor,0);
       cur.yline -= 1;
       eaddcur(editor,cur);
     } else
-    if(rxIsCtrlKey())
+    if(rlIO_testCtrlKey())
     {
       /* scroll up */
-      editor->lyview -= rxIsShiftKey() ? 16 : 1;
+      editor->lyview -= rlIO_testShiftKey() ? 16 : 1;
       editor->lyview  = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
@@ -651,18 +651,18 @@ eeditor_msg(
         emovcury(editor,i,-1);
     }
   } else
-  if(rxTestKey(rx_kKEY_DOWN))
+  if(rlIO_testKey(rx_kKEY_DOWN))
   {
-    if(rxIsCtrlKey() && rxIsMenuKey())
+    if(rlIO_testCtrlKey() && rlIO_testMenuKey())
     {
       ecursor_t cur = egetcur(editor,ecurnum(editor)-1);
       cur.yline += 1;
       eaddcur(editor,cur);
     } else
-    if(rxIsCtrlKey())
+    if(rlIO_testCtrlKey())
     {
       /* scroll down */
-      editor->lyview += rxIsShiftKey() ? 16 : 1;
+      editor->lyview += rlIO_testShiftKey() ? 16 : 1;
       editor->lyview = rxclampi(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
     } else
     {
@@ -671,24 +671,24 @@ eeditor_msg(
         emovcury(editor,i,+1);
     }
   } else
-  if(rxTestKey(rx_kKEY_LEFT))
+  if(rlIO_testKey(rx_kKEY_LEFT))
   { ekey_all(editor,EDITOR_kMOVE_LEFT,   1,0);
   } else
-  if(rxTestKey(rx_kKEY_RIGHT))
+  if(rlIO_testKey(rx_kKEY_RIGHT))
   {
     ekey_all(editor,EDITOR_kMOVE_RIGHT, 1,0);
   } else
-  if(rxTestKey(rx_kDELETE))
+  if(rlIO_testKey(rx_kDELETE))
   { ekey_all(editor,EDITOR_kDELETE_HERE,1,0);
   } else
-  if(rxTestKey(rx_kBCKSPC))
+  if(rlIO_testKey(rx_kBCKSPC))
   { ekey_all(editor,EDITOR_kDELETE_BACK,1,0);
   } else
-  if(rxTestKey(rx_kRETURN))
+  if(rlIO_testKey(rx_kRETURN))
   {
     ekey_all(editor,EDITOR_kLINE,1,0);
   } else
-  { if(!rxIsCtrlKey())
+  { if(!rlIO_testCtrlKey())
     {
       if(rxchr() != 0)
       {

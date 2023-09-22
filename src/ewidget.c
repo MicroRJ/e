@@ -30,7 +30,7 @@ Emu_widget_render(Emu_widget_t *widget, rlBOX rect)
 		widget->cursor_blink_speed_in_seconds = .500;
 	}
 
-	rxFont *font = editor->font;
+	rlFont *font = editor->font;
 
 	eeditor_msg(editor);
 
@@ -78,7 +78,7 @@ Emu_widget_render(Emu_widget_t *widget, rlBOX rect)
       config.line_count = ccarrlen(buffer.lcache);
    }
 
-   Emu_draw_text( &config );
+   rlFont_drawText( &config );
 
    return ccfalse;
 }

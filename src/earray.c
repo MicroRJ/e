@@ -20,7 +20,7 @@
 */
 
 #define earray_length(arr) ccarrlen(arr)
-#define earray_add(arr,num) ccarradd(arr,num)
+#define earray_add(arr,num) rlArray_add(arr,num)
 
 #define earray_delete(arr) ccarrdel(arr)
 

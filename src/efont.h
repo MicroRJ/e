@@ -19,92 +19,77 @@
 **
 */
 
-typedef struct Emu_glyph_pallet_t Emu_glyph_pallet_t;
+typedef struct rlGlyphPallet rlGlyphPallet;
 
 /* fonts api only supports ascii characters at the moment and horizontal
 	layouts */
-typedef struct
-{
-	Emu_glyph_pallet_t *pallet;
-  int external_index;
-  int utf32;
-  short x0;
-  short y0;
-  short x1;
-  short y1;
-  short offset_x;
-  short offset_y;
-  float walking_x;
-} Emu_glyph_t;
+typedef struct {
+	rlGlyphPallet *pallet;
+	int external_index;
+	int utf32;
+	short x0;
+	short y0;
+	short x1;
+	short y1;
+	short offset_x;
+	short offset_y;
+	float walking_x;
+} rlFontGlyph;
 
-ccinle void
-Emu_atlas_glyph_init(
-	Emu_glyph_t *glyph,
-	Emu_glyph_pallet_t *pallet,
-  int external_index,
-  int utf32,
-  short x0,
-  short y0,
-  short x1,
-  short y1,
-  short offset_x,
-  short offset_y,
-  float walking_x );
+// typedef struct
+// {
+// 	rlFontGlyph *glyph;
+
+// 	rxvec2_t p0, p1, p2, p3;
+// 	float u0, v0, u1, v1;
+// } Emu_font_quad_t;
 
 typedef struct
 {
-  Emu_glyph_t *glyph;
+	rlGlyphPallet *pallet;
 
-	rxvec2_t p0, p1, p2, p3;
-  float u0, v0, u1, v1;
-} Emu_font_quad_t;
-
-typedef struct
-{
-  Emu_glyph_pallet_t *pallet;
-
-  short height;
+	short height;
   /* buckets allocate bitmap space horizontally */
-  short cursor_x;
+	short cursor_x;
 
   /* each bucket needs to remember where they are in the pallet */
-  short cursor_y;
-} Emu_glyph_bucket_t;
+	short cursor_y;
+} rlGlyphBucket;
 
-typedef struct Emu_glyph_pallet_t
+typedef struct rlGlyphPallet
 {
-  Emu_texture_t       *texture;
-  Emu_texture_memory_t storage;
+	rlTexture       *texture;
+	rlImage storage;
 
-  unsigned dirty: 1;
+	unsigned dirty: 1;
 
   /* buckets are sorted in ascending order, if you find a suitable
   	bucket go for it, it is the optimal size, maybe... if the bucket
   	is still too big you have to create a new one since all the other
   	ones are bigger */
-  Emu_glyph_bucket_t **buckets;
+	rlGlyphBucket **buckets;
 
   /* pallets allocate bitmap space vertically */
-  short cursor_y;
-} Emu_glyph_pallet_t;
+	short cursor_y;
+} rlGlyphPallet;
 
 
 /* #todo */
 typedef struct
 { struct
-  { char const *file;
-    void       *memory;
-    int         length;
-  } ttf;
-  int         char_start;
-  int         char_end;
-  char const *char_string;
+	{ char const *file;
+		void       *memory;
+		int         length;
+	} ttf;
+	int         char_start;
+	int         char_end;
+	char const *char_string;
 
-  int edge_value;
-  int pixels_per_unit;
-  int padding;
-  int supports_subpixel;
-  int supports_sdf;
+	int edge_value;
+	int pixels_per_unit;
+	int padding;
+	int supports_subpixel;
+	int supports_sdf;
 } Emu_glyph_font_config_t;
 
 /* everything is expressed in a y-upwards coordinate system */
@@ -112,7 +97,7 @@ typedef struct
 {
 	char const *fpath;
 
-	Emu_glyph_t **glyph_table;
+	rlFontGlyph **glyph_table;
 
 	float char_height;
 	float line_height;
@@ -139,23 +124,23 @@ typedef struct
 	{
 		stbtt_fontinfo face;
 	} stb;
-} rxFont;
+} rlFont;
 
-rxFont *
-rxLoadFontFile(
-  char const *fpath, float char_height);
+rlFont *
+rlFont_loadFromFile(
+char const *fpath, float char_height);
 
 struct {
 
-	rxFont **fonts;
-	Emu_glyph_pallet_t **pallets;
+	rlFont **fonts;
+	rlGlyphPallet **pallets;
 
 } ccglobal emu_Font_Library;
 
 typedef struct
 {
 	int offset;
-  int length;
+	int length;
 
 } Emu_text_line_t;
 
@@ -163,7 +148,7 @@ typedef struct
 	or this becomes a separate file #pending */
 typedef struct
 {
-	rxFont *font;
+	rlFont *font;
 	float             x,y;
 
 	int tab_size; /* in spaces */
@@ -189,4 +174,4 @@ typedef struct
 } Emu_font_text_config_t;
 
 void
-Emu_draw_text( Emu_font_text_config_t *config );
+rlFont_drawText( Emu_font_text_config_t *config );

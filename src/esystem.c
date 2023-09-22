@@ -89,7 +89,7 @@ HANDLE RunCommandStringEx(const char *commandLine, const char *workingDirectory)
 
   if(Success)
   {
-    // *ccarradd(globalProcessArray,1) = ProcessInfo.hProcess;
+    // *rlArray_add(globalProcessArray,1) = ProcessInfo.hProcess;
   } else
   {
     ccdebuglog("failed to create process");

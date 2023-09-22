@@ -59,7 +59,7 @@ void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float r
 #include <src/ewidget.c>
 #include <src/eeditor.c>
 
-void draw_single_text_line(rxFont *font, float x, float y, char const *string) {
+void draw_single_text_line(rlFont *font, float x, float y, char const *string) {
 
 	/* todo */
 	int length = 0;
@@ -82,7 +82,7 @@ void draw_single_text_line(rxFont *font, float x, float y, char const *string) {
 	config.string = string;
 	config.colors = NULL;
 
-	Emu_draw_text( &config );
+	rlFont_drawText( &config );
 }
 
 

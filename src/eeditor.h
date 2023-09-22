@@ -82,7 +82,7 @@ typedef struct {
 	ebuffer_t  buffer;
 	int        lyview;
 
-	rxFont *font;
+	rlFont *font;
 
 	double     last_event_timer;
 	eevent_t * trail;
