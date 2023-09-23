@@ -22,6 +22,10 @@
 #ifndef _E_H
 #define _E_H
 
+/* TODO: REMOVE */
+# define _RX_STANDALONE
+#include <rx/rx.c>
+
 #ifndef E_REALLOC_ALIGNED
 #define E_REALLOC_ALIGNED(length,memory) _aligned_realloc(memory,length,16)
 # endif
@@ -30,9 +34,48 @@
 #define E_FREE_ALIGNED(memory) _aligned_free(memory);
 # endif
 
-/* TODO: REMOVE */
-# define _RX_STANDALONE
-#include <rx/rx.c>
+#ifndef E_MEMMOVE
+#define E_MEMMOVE memmove
+# endif
+
+#ifndef E_MEMCOPY
+#define E_MEMCOPY memcopy
+# endif
+
+/* TODO: */
+#ifndef E_ASSERT
+#define E_ASSERT ccassert
+# endif
+
+# ifndef E_PHASE
+# define E_PHASE(E,time_since_last_blink,blinks_per_second) (.5 + .5 * cos(rxPI_F * time_since_last_blink / blinks_per_second));
+#include <math.h>
+#  endif
+
+/* [[FONT]] */
+#ifndef E_FONT
+#define E_FONT_GET_LINE_HEIGHT(E)
+#define E_FONT_GET_CODE_DIMENS(E,UTF32,LPWIDTH,LPHEIGHT)
+#define E_FONT_GET_CODE_ADVANCE(E,UTF32A,UTF32B)
+#define E_FONT_GET_NAME(E)
+# endif
+
+/* [[THEME]] */
+#ifndef E_CURSOR_COLOR
+#define E_CURSOR_COLOR(E) E_MK_COLOR_RGBA_UNORM(148,232,148,255)
+# endif
+
+#ifndef E_COLOR
+#define E_COLOR rxcolor_t
+# endif
+#ifndef E_MK_COLOR_RGBA_UNORM
+#define E_MK_COLOR_RGBA_UNORM RX_RGBA_UNORM
+# endif
+
+/* [[DRAWING PROCEDURES]] */
+#ifndef E_DRAW
+#define E_DRAW_AABB(color,roundness,x,y,w,h)
+# endif
 
 #pragma warning(push)
 #pragma warning(disable:4100)
@@ -54,7 +97,7 @@
 
 void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float roundness, float softness );
 
-#include   <src/erect.c>
+#include <src/boxthing.c>
 #include <src/esystem.c>
 #include  <src/earray.c>
 #include <src/estring.c>
@@ -62,6 +105,54 @@ void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float r
 #include   <src/efont.c>
 #include <src/ebuffer.h>
 #include <src/ebuffer.c>
+
+typedef enum {
+	E_MOD_NONE,
+	E_MOD_SHIFT_BIT = 1 << 0,
+	E_MOD_CTRL_BIT = 1 << 1,
+	E_MOD_ALT_BIT = 1 << 2,
+	E_MOD_CUSTOM_0_BIT = 1 << 3,
+	E_MOD_CUSTOM_1_BIT = 1 << 4,
+	E_MOD_CUSTOM_2_BIT = 1 << 5,
+} E_MOD;
+
+
+typedef enum {
+	E_kNONE = 0,
+	E_kMOVE_LEFT,
+	E_kMOVE_UP,
+	E_kMOVE_RIGHT,
+	E_kMOVE_DOWN,
+	E_kMOVE_WORD_LEFT,
+	E_kMOVE_WORD_RIGHT,
+	E_kMOVE_LINE_LEFT,
+	E_kMOVE_LINE_RIGHT,
+	E_kMOVE_PAGE_START,
+	E_kMOVE_PAGE_END,
+	E_kDELETE_BACK,
+	E_kDELETE_HERE,
+	E_kCUT,
+	E_kCOPY,
+	E_kPASTE,
+	E_kLINE,
+	E_kCHAR,
+} E_KEY_NAME;
+
+typedef struct {
+	/* mod: any applied modifiers
+		key: the key
+		num: (optional) the number of times to do it, (1) default
+		chr: (optional) utf32 code
+		cur: target cursor, (-1) for all */
+	E_MOD mod;
+	E_KEY_NAME key;
+	int cur;
+	int num,chr;
+
+	void *lpUser;
+} E_KEY;
+
+
 #include <src/eeditor.h>
 #include <src/eeditor.c>
 

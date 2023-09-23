@@ -19,7 +19,15 @@
 **
 */
 
-/* NOTE: a box thing of sorts */
+// box thing of sorts, for widget stuff
+
+enum {
+	boxen_left,
+	boxen_right,
+	boxen_top,
+	boxen_bot
+};
+
 typedef union boxthing {
 	struct {
 		rxvec2_t xy0;
@@ -30,22 +38,11 @@ typedef union boxthing {
 	};
 } boxthing;
 
-enum {
-	boxen_left,
-	boxen_right,
-	boxen_top,
-	boxen_bot
-};
-
-
 boxthing
 rlMakeBox(float x0, float y0, float x1, float y1) {
 	boxthing rect;
 	rect.x0 = x0; rect.x1 = x1;
 	rect.y0 = y0; rect.y1 = y1;
-
-	// ccassert(x0 <= x1);
-	// ccassert(y0 <= y1);
 	return rect;
 }
 
@@ -123,8 +120,10 @@ static boxthing *curBoxen;
 #define popbox() (curBoxen -= 1)
 #define getbox() (*curBoxen)
 #define setbox(xx) (getbox() = (xx))
-void /* this has to be a function, operand has to be evaluated first and only once */
+
+void
 putbox(boxthing xx) {
+	/* this has to be a function, operand has to be evaluated first and only once */
 	(dupbox(),setbox(xx));
 }
 

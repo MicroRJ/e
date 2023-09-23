@@ -21,55 +21,37 @@
 
 typedef Emu_text_line_t emarker_t;
 
-/* invest some skill points in gap buffer research #maybe */
-typedef struct
-{
-   char const * tag;
+typedef struct {
+	char name[MAX_PATH];
+	char fileName[MAX_PATH];
 
-   char const * disk_path;
+   /* [[todo]]: this could be replaced with single ints, the length of the line
+   	isn't necessary, at least not explicitly, it can be calculated by using the
+   	offset of the next line instead  */
+	emarker_t      *lcache;
 
+	unsigned char  *colors;
+	union  {
+		void        *memory;
+		char        *string;
+	};
 
-   /* convert to unsigned ints instead #todo #urgent */
-   emarker_t      *lcache;
+	int           modified;
+	meow_u128     checksum;
 
-   unsigned char  *colors;
-   union  {
-   void           *memory;
-   char           *string;
-};
-
-   int           modified;
-   meow_u128     checksum;
-   /* the max capacity of the buffer */
-   cci64_t         extent;
-   cci64_t         length;
+	__int64         extent;
+	__int64         length;
 } EBuffer;
 
-typedef struct
-{ char const * tag;
-   char const * disk_save;
-   char const * disk_load;
-   char       * memory;
-   char       * colors;
-   int          length;
-} ebuffer_config_t;
+void EBuffer_setName(EBuffer *, char const *);
+void EBuffer_setFileName(EBuffer *, char const *);
 
-/* don't like this init function #todo */
-void Emu_buffer_init(EBuffer *bfufer, char const *, cci64_t);
+void EBuffer_initSized(EBuffer *, char const *, __int64 length);
 
-char *Emu_buffer_reserve_and_commit(EBuffer *,cci64_t   resv, cci64_t   comm);
-char *Emu_buffer_insert(EBuffer *,cci64_t offset, cci64_t length);
-void  Emu_buffer_remove(EBuffer *,cci64_t offset, cci64_t length);
+/* [[todo]]: alloc and insert could be replaced with a single really nifty function */
+char *EBuffer_allocSize(EBuffer *, __int64 reserve, __int64 commit);
+char *EBuffer_insertSize(EBuffer *, __int64 offset, __int64 length);
 
-void
-ebuffer_build_lcache(
-  EBuffer *buffer);
-ccinle emarker_t
-Emu_buffer_get_line_at_index(
-  EBuffer *buffer, int index);
-ccinle int
-ebuffer_get_line_length(
-  EBuffer *buffer, int yline);
-ccinle int
-ebuffer_get_line_offset(
-  EBuffer *buffer, int yline);
+emarker_t Emu_buffer_get_line_at_index(EBuffer *buffer, int index);
+int ebuffer_get_line_length(EBuffer *buffer, int yline);
+int ebuffer_get_line_offset(EBuffer *buffer, int yline);

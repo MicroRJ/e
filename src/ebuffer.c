@@ -20,167 +20,147 @@
 */
 
 void
-Emu_buffer_init(
-  EBuffer *buffer, char const *tag, cci64_t length)
-{
-   ZeroMemory(buffer,sizeof(*buffer));
-
-   buffer->tag = estring_copy(tag);
-
-   if(length) {
-
-      Emu_buffer_reserve_and_commit(buffer,length,length);
-   }
+EBuffer_setName(EBuffer *lpBuffer, char const *lpName) {
+	strcpy(lpBuffer->name,lpName);
 }
 
 void
-Emu_buffer_uinit(
-  EBuffer *buffer)
-{
-  E_FREE_ALIGNED(buffer->string);
-  E_FREE_ALIGNED(buffer->colors);
-  buffer->length = 0;
-  buffer->extent = 0;
-
-  ccfree(buffer->tag);
-  buffer->tag = 0;
+EBuffer_setFileName(EBuffer *lpBuffer, char const *lpName) {
+	strcpy(lpBuffer->fileName,lpName);
 }
 
-char *
-Emu_buffer_reserve_and_commit(
-  EBuffer *buffer, cci64_t reserve, cci64_t commit)
-{
-  ccassert(commit <= reserve + buffer->extent - buffer->length);
 
-  if(buffer->extent < buffer->length+reserve)
-  {
-    /* this might need fixing */
-    buffer->extent <<= 1;
+void
+EBuffer_initSized(EBuffer *lpBuffer, char const *tag, cci64_t length) {
+	EBuffer_setName(lpBuffer,tag);
 
-    if(buffer->extent < buffer->length + reserve)
-    {
-      buffer->extent = buffer->length + reserve;
-    }
+	if(length) {
 
-    buffer->string = E_REALLOC_ALIGNED(sizeof(*buffer->string) * buffer->extent, buffer->string);
-    buffer->colors = E_REALLOC_ALIGNED(sizeof(*buffer->colors) * buffer->extent, buffer->colors);
-  }
-
-  buffer->length = buffer->length + commit;
-
-  return buffer->string + buffer->length;
-}
-
-char *
-Emu_buffer_insert(
-  EBuffer *buffer, cci64_t offset, cci64_t length)
-{
-  Emu_buffer_reserve_and_commit(buffer,length,length);
-
-  if(offset != buffer->length)
-  {
-    memmove(
-      buffer->string+offset+length,
-      buffer->string+offset,
-      buffer->length-offset-length);
-
-    memmove(
-      buffer->colors+offset+length,
-      buffer->colors+offset,
-      buffer->length-offset-length);
-  }
-
-  return buffer->string+offset;
+		EBuffer_allocSize(lpBuffer,length,length);
+	}
 }
 
 void
-Emu_buffer_remove(
-  EBuffer *buffer, cci64_t offset, cci64_t length)
-{
-  if(offset != buffer->length)
-  {
-    memmove(
-      buffer->string+offset,
-      buffer->string+offset+length,
-      buffer->length-offset-length);
+EBuffer_uninit(EBuffer *buffer) {
 
-    memmove(
-      buffer->colors+offset,
-      buffer->colors+offset+length,
-      buffer->length-offset-length);
-  }
-
-  /* todo: */
-  buffer->length -= length;
+	E_FREE_ALIGNED(buffer->string);
+	E_FREE_ALIGNED(buffer->colors);
+	buffer->length = 0;
+	buffer->extent = 0;
 }
 
+char *
+EBuffer_allocSize(EBuffer *lpBuffer, __int64 reserve, __int64 commit) {
+	E_ASSERT(commit <= reserve + lpBuffer->extent - lpBuffer->length);
+
+	if(lpBuffer->extent < lpBuffer->length+reserve) {
+		lpBuffer->extent <<= 1;
+		if(lpBuffer->extent < lpBuffer->length + reserve) {
+			lpBuffer->extent = lpBuffer->length + reserve;
+		}
+		lpBuffer->string = E_REALLOC_ALIGNED(sizeof(*lpBuffer->string) * lpBuffer->extent, lpBuffer->string);
+		lpBuffer->colors = E_REALLOC_ALIGNED(sizeof(*lpBuffer->colors) * lpBuffer->extent, lpBuffer->colors);
+	}
+
+	lpBuffer->length = lpBuffer->length + commit;
+	return lpBuffer->string + lpBuffer->length;
+}
+
+char *
+EBuffer_insertSize(EBuffer *buffer, __int64 offset, __int64 length) {
+
+	char *colors = (char *) buffer->colors + offset;
+	char *string = (char *) buffer->string + offset;
+	size_t tomove = buffer->length - offset - length;
+
+	// printf("length: [%lli/%lli] insert: %lli tomove: %lli\n"
+	// , buffer->length, buffer->extent, length, tomove);
+
+	if (length > 0) {
+		EBuffer_allocSize(buffer,length,length);
+	}
+
+	if (offset != buffer->length) {
+
+
+		/* [[todo]]: this could be niftier */
+		if (length < 0) {
+			E_MEMMOVE(string,string-length,tomove);
+			E_MEMMOVE(colors,colors-length,tomove);
+		} else {
+			E_MEMMOVE(string+length,string,tomove);
+			E_MEMMOVE(colors+length,colors,tomove);
+		}
+	}
+
+	if (length < 0) {
+		buffer->length += length;
+	}
+
+	return buffer->string+offset;
+}
+
+
+/* could this be done automatically #todo */
+void
+Emu_buffer_rescan_lines(EBuffer *buffer) {
+
+	char *cursor = buffer->string;
+  /* todo */
+	earray_delete(buffer->lcache);
+	buffer->lcache = 0;
+
+	int indent = 0;
+	for(;;) {
+		emarker_t *line = earray_add(buffer->lcache,1);
+		line->offset = (cursor - buffer->string);
+
+		while((cursor < buffer->string + buffer->length) &&
+		(*cursor != '\r') &&
+		(*cursor != '\n')) cursor += 1;
+
+		line->length = (cursor - buffer->string) - line->offset;
+
+	if(cursor < buffer->string + buffer->length)
+	{
+		cursor += ((cursor[0] == '\r') &&
+		(cursor[1] == '\n'))  ? 2 : 1;
+	} else
+	{
+		break;
+	}
+}
+
+ccassert(cursor == buffer->string + buffer->length);
+}
 
 ccinle emarker_t
 Emu_buffer_get_line_at_index(
-  EBuffer *buffer, int index)
+EBuffer *buffer, int index)
 {
   /* remove, this should not happen? */
-  if(buffer->lcache == ccnull)
-  {
-    emarker_t row;
-    row.length = 0;
-    row.offset = 0;
-    return row;
-  }
+	if(buffer->lcache == ccnull)
+	{
+		emarker_t row;
+		row.length = 0;
+		row.offset = 0;
+		return row;
+	}
 
-  return buffer->lcache[index];
+	return buffer->lcache[index];
 }
 
 ccinle int
 ebuffer_get_line_offset(
-  EBuffer *buffer, int yline)
+EBuffer *buffer, int yline)
 {
-  return Emu_buffer_get_line_at_index(buffer,yline).offset;
+	return Emu_buffer_get_line_at_index(buffer,yline).offset;
 }
 
 ccinle int
 ebuffer_get_line_length(
-  EBuffer *buffer, int yline)
+EBuffer *buffer, int yline)
 {
-  return Emu_buffer_get_line_at_index(buffer,yline).length;
+	return Emu_buffer_get_line_at_index(buffer,yline).length;
 }
 
-/* could this be done automatically #todo */
-void
-Emu_buffer_rescan_lines(
-  EBuffer *buffer)
-{
-
-
-
-  char *cursor = buffer->string;
-
-  /* todo */
-  earray_delete(buffer->lcache);
-  buffer->lcache = 0;
-
-
-  int indent = 0;
-  for(;;)
-  {
-    emarker_t *line = earray_add(buffer->lcache,1);
-    line->offset = (cursor - buffer->string);
-
-    while((cursor < buffer->string + buffer->length) &&
-          (*cursor != '\r') &&
-          (*cursor != '\n')) cursor += 1;
-
-    line->length = (cursor - buffer->string) - line->offset;
-
-    if(cursor < buffer->string + buffer->length)
-    {
-      cursor += ((cursor[0] == '\r') &&
-                 (cursor[1] == '\n'))  ? 2 : 1;
-    } else
-    {
-      break;
-    }
-  }
-
-  ccassert(cursor == buffer->string + buffer->length);
-}

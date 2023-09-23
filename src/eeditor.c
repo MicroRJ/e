@@ -23,8 +23,7 @@ typedef Editor Emu_widget_t;
 
 
 int
-Editor_render(Emu_widget_t *widget, boxthing rect)
-{
+Editor_render(Emu_widget_t *widget, boxthing rect) {
 	int in_rect = cursor_in_rect(rect);
 
 	Editor *editor = widget;
@@ -35,18 +34,15 @@ Editor_render(Emu_widget_t *widget, boxthing rect)
 
 	rlFont *font = editor->font;
 
-	eeditor_msg(editor);
-
-	double animation = .5 + .5 * sin(rxPI_F * widget->cursor_blink_timer / widget->cursor_blink_speed_in_seconds);
+	double animation = E_PHASE(widget,widget->cursor_blink_timer,widget->cursor_blink_speed_in_seconds);
 
 	widget->cursor_blink_timer += rx.delta_seconds;
 
 	/* todo */
-	rxcolor_t color = RX_RGBA_UNORM(148,232,148,255);
+	rxcolor_t color = E_CURSOR_COLOR(widget);
 	color.a = rxclamp(animation,.1,.8);
 
-	for(int i=0;i<ccarrlen(editor->cursor);i+=1)
-	{
+	for(int i=0;i<ccarrlen(editor->cursor);i+=1) {
 		boxthing cur_rec = ecurrec(editor,i,rect);
 
 		/* this function should just take an e-rect */
@@ -90,12 +86,6 @@ Editor_render(Emu_widget_t *widget, boxthing rect)
 
 /* todo: cursors need to be sorted and merged if occupy the same slot */
 
-int
-ecurnum(
-Editor *editor)
-{
-	return ccarrlen(editor->cursor);
-}
 
 int
 ecurcmp(
@@ -234,9 +224,9 @@ esetcur(
 Editor *editor, int index, ecursor_t cur)
 {
   /* ensure the cursor is never out of bounds */
-	cur.yline = rxclamp(cur.yline,0,
+	cur.yline = rlI_clamp(cur.yline,0,
 	ccarrlen(editor->buffer.lcache)-1);
-	cur.xchar = rxclamp(cur.xchar,0,
+	cur.xchar = rlI_clamp(cur.xchar,0,
 	ebuffer_get_line_length(&editor->buffer,cur.yline));
 
 	ecursor_t old = egetcur(editor,index);
@@ -294,9 +284,7 @@ ecurchr(Editor *wdg, int index, int off)
 }
 
 boxthing
-ecurrec(
-Editor *wdg, int index, boxthing rect)
-{
+ecurrec(Editor *wdg, int index, boxthing rect) {
 
 	ecursor_t cur = egetcur(wdg,index);
 	emarker_t row = Emu_buffer_get_line_at_index(&wdg->buffer,cur.yline);
@@ -307,7 +295,7 @@ Editor *wdg, int index, boxthing rect)
 	float x = egetinf(wdg,index);
 
   /* #todo */
-	int cur_xsize = rxmaxi(
+	int cur_xsize = rlI_max(
 	efont_code_width(wdg->font,'.'),
 	efont_code_width(wdg->font,curchr));
 
@@ -319,24 +307,21 @@ Editor *wdg, int index, boxthing rect)
 }
 
 ecursor_t
-emovcurx(
-Editor *editor, int cursor, int mov)
-{
+emovcurx(Editor *editor, int cursor, int mov) {
 	ecursor_t cur = egetcur(editor,cursor);
 
-	if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline))
-	{ if(cur.yline + 1 <= ccarrlen(editor->buffer.lcache) - 1)
+	if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline)) {
+		if(cur.yline + 1 <= ccarrlen(editor->buffer.lcache) - 1)
 		{ cur.yline += 1;
 			cur.xchar  = 0;
 		}
 	} else
-	if(cur.xchar + mov < 0)
-	{ if(cur.yline - 1 >= 0)
-		{ cur.yline -= 1;
+	if(cur.xchar + mov < 0) {
+		if(cur.yline - 1 >= 0) {
+			cur.yline -= 1;
 			cur.xchar  = ebuffer_get_line_length(&editor->buffer,cur.yline);
 		}
-	} else
-	{
+	} else {
 		cur.xchar += mov;
 	}
 
@@ -361,12 +346,12 @@ Editor *wdg, int cursor, int length)
   // if(cur.event.type != kCHAR)
 	{
     /* if there's no event do not store */
-		if(wdg->event.type != EDITOR_kNONE)
+		if(wdg->event.type != E_kNONE)
 		{
 			*rlArray_add(wdg->trail,1) = wdg->event;
 		}
 
-		wdg->event.type   = EDITOR_kCHAR;
+		wdg->event.type   = E_kCHAR;
 		wdg->event.cursor = egetcur(wdg,cursor);
 		wdg->event.length = 0;
 
@@ -377,82 +362,47 @@ Editor *wdg, int cursor, int length)
 
 
 	void
-	ekey_one(
-	Editor *wdg, int key, int num, int chr, int cur);
+	Editor_keyOne(Editor *wdg, E_KEY key) {
 
-	void
-	ekey_all(
-	Editor *wdg, int key, int num, int chr)
-	{
-		for(int cur=ecurnum(wdg)-1; cur>=0; cur-=1)
-		{
-			ekey_one(wdg,key,num,chr,cur);
-		}
-	}
-
-	void
-	ekey_one(
-	Editor *wdg, int key, int num, int chr, int cur)
-	{
-
-		ecursor_t cursor = egetcur(wdg,cur);
-		int off = ecurloc(wdg,cur);
+		ecursor_t cursor = egetcur(wdg,key.cur);
+		int off = ecurloc(wdg,key.cur);
 		int dir = 0;
-		switch(key)
-		{ case EDITOR_kMOD_CONTROL:
-			{ wdg->is_control = chr != 0;
-			} break;
-			case EDITOR_kMOD_SHIFT:
-			{ wdg->is_shift = chr != 0;
-			} break;
-			case EDITOR_kMOD_ALT:
-			{ wdg->is_alt = chr != 0;
-			} break;
-			case EDITOR_kMOD_INSERT:
-			{ wdg->is_insert = chr != 0;
-			} break;
-			case EDITOR_kMOVE_LEFT:
-			case EDITOR_kMOVE_RIGHT:
-			{
+		int cur = key.cur;
+		int num = key.num;
+		int chr = key.chr;
+		switch(key.key) {
+			case E_kMOVE_LEFT: case E_kMOVE_RIGHT: {
 				wdg->cursor_blink_timer = 0;
-
 				dir = +1;
-
-				if(key == EDITOR_kMOVE_LEFT)
-				{
+				if (key.key == E_kMOVE_LEFT) {
 					off += (dir = -1);
 				}
-
-				if(wdg->is_control)
-				{
-					if(IS_WORD_DELIMETER(egetchr(wdg,off)))
-					{ while(egetchr(wdg,off)!=0 && IS_WORD_DELIMETER(egetchr(wdg,off)))
-						{
+				if (key.mod & E_MOD_CTRL_BIT) {
+					if (IS_WORD_DELIMETER(egetchr(wdg,off))) {
+						while (egetchr(wdg,off)!=0 && IS_WORD_DELIMETER(egetchr(wdg,off))) {
 							emovcurx(wdg,cur,dir); off += dir;
 						}
-					} else
-					{ while(egetchr(wdg,off)!=0 && !IS_WORD_DELIMETER(egetchr(wdg,off)))
-						{
+					} else {
+						while (egetchr(wdg,off)!=0 && !IS_WORD_DELIMETER(egetchr(wdg,off))) {
 							emovcurx(wdg,cur,dir); off += dir;
 						}
 					}
-				} else
-				{
+				} else {
 					emovcurx(wdg,cur,dir);
 				}
 			} break;
-			case EDITOR_kMOVE_LINE_RIGHT:
+			case E_kMOVE_LINE_RIGHT:
 			{
 				esetcurx(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
 			} break;
-			case EDITOR_kMOVE_LINE_LEFT:
+			case E_kMOVE_LINE_LEFT:
 			{
 				esetcurx(wdg,cur,0);
 			} break;
-			case EDITOR_kDELETE_BACK:
+			case E_kDELETE_BACK:
 			off += (dir = - 1);
     /* fall-through */
-			case EDITOR_kDELETE_HERE:
+			case E_kDELETE_HERE:
 			if( off >= 0 && off + num <= wdg->buffer.length)
 			{
 				wdg->cursor_blink_timer = 0;
@@ -470,93 +420,85 @@ Editor *wdg, int cursor, int length)
       /* gotta move the cursor first */
 				emovcurx(wdg,cur,dir*num);
 
-				Emu_buffer_remove(&wdg->buffer,off,num);
+				EBuffer_insertSize(&wdg->buffer,off,-num);
 				Emu_buffer_rescan_lines(&wdg->buffer);
 
 			} break;
-			case EDITOR_kCHAR:
-			{
+			case E_kCHAR: {
 				wdg->cursor_blink_timer = 0;
-
-      /* we can handle this properly instead #todo */
-				ccassert(
-				chr != '\r' &&
-				chr != '\n' );
+				E_ASSERT(chr != '\r' && chr != '\n' );
 
 				int mov = 1;
 				int end = 0;
 
-				if(chr >= 0x80)
-				{ chr = '?';
-			end =   0;
-			mov =   1;
-		} else
-      /* this should be based on the user's setttings, whether the user
-        wants to convert tabs to spaces #todo*/
-		if(chr == '\t')
-		{ chr = ' ';
-	end = ' ';
-	mov =   2;
-} else
-      /* remove these syntax sensitive controls from here #todo */
-switch(chr)
-{
-	case '{': end = '}'; break;
-	case '[': end = ']'; break;
-	case '(': end = ')'; break;
-        /* if the cursor is already hovering over any of these
-         and the user types one of them, simply move the cursor to the right */
-	case '}':
-	case ']':
-	case ')':
-	if(egetchr(wdg,off) == chr)
-	{
-		mov = 1;
-		chr = 0;
-		end = 0;
-	} break;
-}
+				if(chr >= 0x80) {
+					chr = '?';
+					end =   0;
+					mov =   1;
+				} else
+		/* [[TODO]]: should be based off of user's settings */
+				if (chr == '\t') {
+					chr = ' ';
+					end = ' ';
+					mov =   2;
+				} else
+				switch(chr) {
+					case '{': end = '}'; break;
+					case '[': end = ']'; break;
+					case '(': end = ')'; break;
+					case '}':
+					case ']':
+					case ')':
+	  /* if the cursor is already hovering over any of these
+	   and the user types one of them, simply move the cursor to the right */
+					if(egetchr(wdg,off) == chr)
+					{
+						mov = 1;
+						chr = 0;
+						end = 0;
+					} break;
+				}
 
-if(chr != 0)
-{
-	num = end!=0?2:1;
+				if(chr != 0)
+				{
+					num = end!=0?2:1;
 
-	char *ptr = Emu_buffer_insert(&wdg->buffer,off,num);
-	ptr[0] = chr;
+					char *ptr = EBuffer_insertSize(&wdg->buffer,off,num);
+					ptr[0] = chr;
 
-	if(end != 0)
-	ptr[1] = end;
+					if(end != 0)
+					ptr[1] = end;
 
         /* notify of the event and then move the index */
-eaddchr_(wdg,off,num);
-Emu_buffer_rescan_lines(&wdg->buffer);
-}
+				eaddchr_(wdg,off,num);
+				Emu_buffer_rescan_lines(&wdg->buffer);
+			}
 
-emovcurx(wdg,cur,mov);
-} break;
-case EDITOR_kLINE:
-{
+			emovcurx(wdg,cur,mov);
+		} break;
+		case E_kLINE:
+		{
       /* this is syntax specific #todo */
-	if(egetchr(wdg,off-1) == '{')
-	num += 1;
+			if(egetchr(wdg,off-1) == '{')
+			num += 1;
 
-char *ptr = Emu_buffer_insert(&wdg->buffer,off,num*2);
+		char *ptr = EBuffer_insertSize(&wdg->buffer,off,num*2);
 
       /* proper line end feed #todo */
-while(num -- != 0)
-{
-	ptr[num*2+0] = '\r';
-	ptr[num*2+1] = '\n';
-}
+		while(num -- != 0)
+		{
+			ptr[num*2+0] = '\r';
+			ptr[num*2+1] = '\n';
+		}
 
       // eaddrow(wdg,egetcury(wdg,index),num);
 
-eaddchr_(wdg,cur,num*2);
-emovcury(wdg,cur,    1);
-esetcurx(wdg,cur,    0);
+		eaddchr_(wdg,cur,num*2);
+		emovcury(wdg,cur,    1);
+		esetcurx(wdg,cur,    0);
 
-Emu_buffer_rescan_lines(&wdg->buffer);
-} break;
+		Emu_buffer_rescan_lines(&wdg->buffer);
+	} break;
 }
 }
 
@@ -572,8 +514,8 @@ Editor *editor, char const *name)
 
 		if(memory != 0)
 		{
-			Emu_buffer_uinit(&editor->buffer);
-			Emu_buffer_init(&editor->buffer,name,length);
+			EBuffer_uninit(&editor->buffer);
+			EBuffer_initSized(&editor->buffer,name,length);
 
 			memcpy(editor->buffer.string,memory,length);
 
@@ -615,14 +557,21 @@ Editor *editor, char const *name)
 	return result;
 }
 
-/* remove from here #todo */
 void
-eeditor_msg(
-Editor *editor)
-{
-	ekey_one(editor,EDITOR_kMOD_CONTROL,0,rlIO_testCtrlKey(),0);
-	ekey_one(editor,EDITOR_kMOD_ALT,0,rlIO_testMenuKey(),0);
-	ekey_one(editor,EDITOR_kMOD_SHIFT,0,rlIO_testShiftKey(),0);
+Editor_testKeys(Editor *editor) {
+
+	int mod = 0;
+
+	/* [[todo]]: why doesn't rl just use a flag for this */
+	if rlIO_testCtrlKey() {
+		mod |= E_MOD_CTRL_BIT;
+	}
+	if rlIO_testAltKey() {
+		mod |= E_MOD_ALT_BIT;
+	}
+	if rlIO_testShiftKey() {
+		mod |= E_MOD_SHIFT_BIT;
+	}
 
 	if(IS_CLICK_ENTER(0))
 	{
@@ -649,17 +598,7 @@ Editor *editor)
 		}
 
 	} else
-	if(rlIO_testCtrlKey() && rlIO_testKey('Z'))
-	{
-		eevent_t event = epopevn(editor);
-
-		if(event.type == EDITOR_kCHAR)
-		{
-      // esetcur(editor,0,event.cursor);
-      // edelchr(editor,0,event.length);
-			ekey_one(editor,EDITOR_kDELETE_BACK,event.length,0,0);
-		}
-
+	if(rlIO_testCtrlKey() && rlIO_testKey('Z')) {
 	} else
 	if(rlIO_testKey(rx_kESCAPE))
 	{
@@ -676,12 +615,12 @@ Editor *editor)
 	} else
 	if(rlIO_testKey(rx_kHOME))
 	{
-		ekey_all(editor,EDITOR_kMOVE_LINE_LEFT,1,0);
+		Editor_handleKey(editor,E_kMOVE_LINE_LEFT,1,0);
 
 	} else
 	if(rlIO_testKey(rx_kEND))
 	{
-		ekey_all(editor,EDITOR_kMOVE_LINE_RIGHT,1,0);
+		Editor_handleKey(editor,E_kMOVE_LINE_RIGHT,1,0);
 	} else
 	if(rlIO_testCtrlKey() && rlIO_testKey('X'))
 	{
@@ -695,14 +634,14 @@ Editor *editor)
 			if((ptr[0]=='\r') &&
 			(ptr[1]=='\n')) num += 1;
 
-			Emu_buffer_remove(&editor->buffer,row.offset,row.length+num);
+			EBuffer_insertSize(&editor->buffer,row.offset,-(row.length+num));
 		Emu_buffer_rescan_lines(&editor->buffer);
 	}
 
 } else
 if(rlIO_testKey(rx_kKEY_UP))
 {
-	if(rlIO_testCtrlKey() && rlIO_testMenuKey())
+	if(rlIO_testCtrlKey() && rlIO_testAltKey())
 	{
 		ecursor_t cur = egetcur(editor,0);
 		cur.yline -= 1;
@@ -722,7 +661,7 @@ if(rlIO_testKey(rx_kKEY_UP))
 } else
 if(rlIO_testKey(rx_kKEY_DOWN))
 {
-	if(rlIO_testCtrlKey() && rlIO_testMenuKey())
+	if(rlIO_testCtrlKey() && rlIO_testAltKey())
 	{
 		ecursor_t cur = egetcur(editor,ecurnum(editor)-1);
 		cur.yline += 1;
@@ -741,27 +680,27 @@ if(rlIO_testKey(rx_kKEY_DOWN))
 }
 } else
 if(rlIO_testKey(rx_kKEY_LEFT))
-{ ekey_all(editor,EDITOR_kMOVE_LEFT,   1,0);
+{ Editor_handleKey(editor,E_kMOVE_LEFT,   1,0);
 } else
 if(rlIO_testKey(rx_kKEY_RIGHT))
 {
-	ekey_all(editor,EDITOR_kMOVE_RIGHT, 1,0);
+	Editor_handleKey(editor,E_kMOVE_RIGHT, 1,0);
 } else
 if(rlIO_testKey(rx_kDELETE))
-{ ekey_all(editor,EDITOR_kDELETE_HERE,1,0);
+{ Editor_handleKey(editor,E_kDELETE_HERE,1,0);
 } else
 if(rlIO_testKey(rx_kBCKSPC))
-{ ekey_all(editor,EDITOR_kDELETE_BACK,1,0);
+{ Editor_handleKey(editor,E_kDELETE_BACK,1,0);
 } else
 if(rlIO_testKey(rx_kRETURN))
 {
-	ekey_all(editor,EDITOR_kLINE,1,0);
+	Editor_handleKey(editor,E_kLINE,1,0);
 } else
 { if(!rlIO_testCtrlKey())
 	{
 		if(rxchr() != 0)
 		{
-			ekey_all(editor,EDITOR_kCHAR,1,rxchr());
+			Editor_handleKey(editor,E_kCHAR,1,rxchr());
 		}
 	}
 }

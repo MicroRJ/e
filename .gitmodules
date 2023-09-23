@@ -1,3 +1,4 @@
 [submodule "rx"]
 	path = rx
 	url = https://github.com/MicroRJ/rx
+	branch = elang

@@ -19,38 +19,6 @@
 **
 */
 
-enum {
-	EDITOR_kNONE = 0,
-
-	EDITOR_kMOD_CONTROL,
-	EDITOR_kMOD_SHIFT,
-	EDITOR_kMOD_ALT,
-	EDITOR_kMOD_INSERT,
-
-	EDITOR_kMOVE_LEFT,
-	EDITOR_kMOVE_UP,
-	EDITOR_kMOVE_RIGHT,
-	EDITOR_kMOVE_DOWN,
-
-	EDITOR_kMOVE_WORD_LEFT,
-	EDITOR_kMOVE_WORD_RIGHT,
-
-	EDITOR_kMOVE_LINE_LEFT,
-	EDITOR_kMOVE_LINE_RIGHT,
-
-	EDITOR_kMOVE_PAGE_START,
-	EDITOR_kMOVE_PAGE_END,
-
-	EDITOR_kDELETE_BACK,
-	EDITOR_kDELETE_HERE,
-
-	EDITOR_kCUT,
-	EDITOR_kCOPY,
-	EDITOR_kPASTE,
-
-	EDITOR_kLINE,
-	EDITOR_kCHAR,
-};
 
 typedef struct {
 	int xchar;
@@ -69,10 +37,7 @@ typedef struct {
 
 
 typedef struct {
-	unsigned is_control: 1;
-	unsigned is_insert:  1;
-	unsigned is_shift:   1;
-	unsigned is_alt:     1;
+	E_MOD mod;
 
 	ecursor_t *cursor;
 
@@ -92,10 +57,41 @@ typedef struct {
 	float cursor_blink_timer;
 } Editor;
 
+
+int
+ecurnum(Editor *editor) {
+	return ccarrlen(editor->cursor);
+}
+
 /* this is temporary */
 void
-eeditor_msg(
-Editor *);
+Editor_testKeys(Editor *);
+
+void
+Editor_keyOne(Editor *wdg, E_KEY key);
+
+void
+Editor_keyAll(Editor *lp, E_KEY key) {
+	for (key.cur=ecurnum(lp)-1; key.cur>=0; key.cur-=1) {
+		Editor_keyOne(lp,key);
+	}
+}
+
+void
+Editor_handleKey(Editor *lp, E_KEY_NAME name, int num, int chr) {
+	E_KEY key;
+	key.mod = lp->mod;
+	key.key = name;
+	key.num = num;
+	key.chr = chr;
+	key.cur =  -1;
+	Editor_keyAll(lp,key);
+}
+
+
+
+
+
 
 /* this is temporary */
 int
@@ -174,7 +170,7 @@ Editor *wdg)
 {
 	eevent_t evn = wdg->event;
 
-	wdg->event.type = EDITOR_kNONE;
+	wdg->event.type = E_kNONE;
 
 	if(earray_length(wdg->trail) != 0)
 	{

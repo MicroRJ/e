@@ -44,10 +44,10 @@ int main(int argc, char **argv)
 		if(rlIO_testKey(rx_kKEY_F9))
 		{
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testMenuKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_UP))
+		if(rlIO_testCtrlKey() && rlIO_testAltKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_UP))
 		{
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testMenuKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_DOWN))
+		if(rlIO_testCtrlKey() && rlIO_testAltKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_DOWN))
 		{
 		} else
 		if(rlIO_testCtrlKey() && rlIO_testKey('P'))
