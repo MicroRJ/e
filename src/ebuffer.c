@@ -21,7 +21,7 @@
 
 void
 Emu_buffer_init(
-  ebuffer_t *buffer, char const *tag, cci64_t length)
+  EBuffer *buffer, char const *tag, cci64_t length)
 {
    ZeroMemory(buffer,sizeof(*buffer));
 
@@ -35,10 +35,10 @@ Emu_buffer_init(
 
 void
 Emu_buffer_uinit(
-  ebuffer_t *buffer)
+  EBuffer *buffer)
 {
-  Emu_memory_release_aligned(buffer->string);
-  Emu_memory_release_aligned(buffer->colors);
+  E_FREE_ALIGNED(buffer->string);
+  E_FREE_ALIGNED(buffer->colors);
   buffer->length = 0;
   buffer->extent = 0;
 
@@ -48,7 +48,7 @@ Emu_buffer_uinit(
 
 char *
 Emu_buffer_reserve_and_commit(
-  ebuffer_t *buffer, cci64_t reserve, cci64_t commit)
+  EBuffer *buffer, cci64_t reserve, cci64_t commit)
 {
   ccassert(commit <= reserve + buffer->extent - buffer->length);
 
@@ -62,8 +62,8 @@ Emu_buffer_reserve_and_commit(
       buffer->extent = buffer->length + reserve;
     }
 
-    buffer->string = Emu_memory_realloc_aligned(sizeof(*buffer->string) * buffer->extent, buffer->string);
-    buffer->colors = Emu_memory_realloc_aligned(sizeof(*buffer->colors) * buffer->extent, buffer->colors);
+    buffer->string = E_REALLOC_ALIGNED(sizeof(*buffer->string) * buffer->extent, buffer->string);
+    buffer->colors = E_REALLOC_ALIGNED(sizeof(*buffer->colors) * buffer->extent, buffer->colors);
   }
 
   buffer->length = buffer->length + commit;
@@ -73,7 +73,7 @@ Emu_buffer_reserve_and_commit(
 
 char *
 Emu_buffer_insert(
-  ebuffer_t *buffer, cci64_t offset, cci64_t length)
+  EBuffer *buffer, cci64_t offset, cci64_t length)
 {
   Emu_buffer_reserve_and_commit(buffer,length,length);
 
@@ -95,7 +95,7 @@ Emu_buffer_insert(
 
 void
 Emu_buffer_remove(
-  ebuffer_t *buffer, cci64_t offset, cci64_t length)
+  EBuffer *buffer, cci64_t offset, cci64_t length)
 {
   if(offset != buffer->length)
   {
@@ -117,7 +117,7 @@ Emu_buffer_remove(
 
 ccinle emarker_t
 Emu_buffer_get_line_at_index(
-  ebuffer_t *buffer, int index)
+  EBuffer *buffer, int index)
 {
   /* remove, this should not happen? */
   if(buffer->lcache == ccnull)
@@ -133,14 +133,14 @@ Emu_buffer_get_line_at_index(
 
 ccinle int
 ebuffer_get_line_offset(
-  ebuffer_t *buffer, int yline)
+  EBuffer *buffer, int yline)
 {
   return Emu_buffer_get_line_at_index(buffer,yline).offset;
 }
 
 ccinle int
 ebuffer_get_line_length(
-  ebuffer_t *buffer, int yline)
+  EBuffer *buffer, int yline)
 {
   return Emu_buffer_get_line_at_index(buffer,yline).length;
 }
@@ -148,7 +148,7 @@ ebuffer_get_line_length(
 /* could this be done automatically #todo */
 void
 Emu_buffer_rescan_lines(
-  ebuffer_t *buffer)
+  EBuffer *buffer)
 {
 
 

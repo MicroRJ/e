@@ -22,6 +22,15 @@
 #ifndef _E_H
 #define _E_H
 
+#ifndef E_REALLOC_ALIGNED
+#define E_REALLOC_ALIGNED(length,memory) _aligned_realloc(memory,length,16)
+# endif
+
+#ifndef E_FREE_ALIGNED
+#define E_FREE_ALIGNED(memory) _aligned_free(memory);
+# endif
+
+/* TODO: REMOVE */
 # define _RX_STANDALONE
 #include <rx/rx.c>
 
@@ -47,7 +56,6 @@ void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float r
 
 #include   <src/erect.c>
 #include <src/esystem.c>
-#include <src/ememory.c>
 #include  <src/earray.c>
 #include <src/estring.c>
 #include   <src/efont.h>
@@ -55,8 +63,6 @@ void Emu_imp_rect_sdf(rxvec2_t center, rxvec2_t radius, rxcolor_t color, float r
 #include <src/ebuffer.h>
 #include <src/ebuffer.c>
 #include <src/eeditor.h>
-#include <src/ewidget.h>
-#include <src/ewidget.c>
 #include <src/eeditor.c>
 
 void draw_single_text_line(rlFont *font, float x, float y, char const *string) {
@@ -68,7 +74,7 @@ void draw_single_text_line(rlFont *font, float x, float y, char const *string) {
 		string += 1;
 	}
 
-	Emu_font_text_config_t config;
+	rlFont_Draw_Config config;
 	ZeroMemory(&config,sizeof(config));
 	config.font = font;
 	config.x = x;

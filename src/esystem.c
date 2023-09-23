@@ -20,28 +20,28 @@
 */
 
 /* todo: */
-void set_window_rect(HWND wnd, rlBOX rect)
+void set_window_rect(HWND wnd, boxthing rect)
 {
   SetWindowPos(wnd,HWND_TOP,rect.x0,rect.y0,0,0,SWP_NOSIZE);
 }
 
 /* todo: */
-rlBOX
+boxthing
 get_monitor_rect()
-{ rlBOX rect = rlMakeBoxBySize(0,0,
+{ boxthing rect = rlMakeBoxBySize(0,0,
     GetSystemMetrics(SM_CXSCREEN),
     GetSystemMetrics(SM_CYSCREEN));
   return rect;
 }
 
 /* todo: */
-rlBOX
+boxthing
 get_window_rect()
 {
   RECT wnd_rect;
   GetWindowRect(rx.wnd.win32.obj,&wnd_rect);
 
-  rlBOX rect;
+  boxthing rect;
   rect = rlMakeBox(
       wnd_rect.  left, wnd_rect.   top,
       wnd_rect. right, wnd_rect.bottom );
@@ -49,9 +49,9 @@ get_window_rect()
   return rect;
 }
 
-rlBOX
+boxthing
 rlGetWindowClientBox()	{
-  rlBOX rect;
+  boxthing rect;
   rect = rlMakeBoxBySize(0,0,rx.wnd.size_x,rx.wnd.size_y);
   return rect;
 }

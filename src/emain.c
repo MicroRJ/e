@@ -9,11 +9,11 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	rlInitWindowed(L"e");
+	rl_initWindowed(L"e");
 
 	rlFont *font = rlFont_loadFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
-	eeditor_t editor;
+	Editor editor;
 	ZeroMemory(&editor,sizeof(editor));
 
 	eaddcur(&editor,(ecursor_t){0,0});
@@ -61,16 +61,16 @@ int main(int argc, char **argv)
 		{ eeditor_unload(&editor,fdlg());
 		} else
 		{
-			rlBOX r = rlGetWindowClientBox();
+			boxthing r = rlGetWindowClientBox();
 			rlDrawRect(r,RX_RGBA_UNORM(8,36,36,255));
 
-			if(Emu_widget_render(&editor,r))
+			if(Editor_render(&editor,r))
 			{
 			}
 
 			for(int i=0; i<1; i+=1)
 			{
-				rlBOX f = rlBoxCut(&r,RECT_kBOT,22.);
+				boxthing f = rlBoxCut(&r,boxen_bot,22.);
 				rlDrawRect(f,RX_RGBA_UNORM(122,104,81,255));
 
 				draw_single_text_line(editor.font,f.x0,f.y0,
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 				editor.buffer.tag,
 				editor.buffer.length,
 				editor.buffer.extent,
-				ccfnames(editor.font->fpath),editor.font->char_height,1./rx.delta_seconds));
+				ccFN_makeFileName(editor.font->fpath),editor.font->char_height,1./rx.delta_seconds));
 			}
 		}
 #endif

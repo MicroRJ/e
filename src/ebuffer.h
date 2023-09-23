@@ -43,7 +43,7 @@ typedef struct
    /* the max capacity of the buffer */
    cci64_t         extent;
    cci64_t         length;
-} ebuffer_t;
+} EBuffer;
 
 typedef struct
 { char const * tag;
@@ -55,21 +55,21 @@ typedef struct
 } ebuffer_config_t;
 
 /* don't like this init function #todo */
-void Emu_buffer_init(ebuffer_t *bfufer, char const *, cci64_t);
+void Emu_buffer_init(EBuffer *bfufer, char const *, cci64_t);
 
-char *Emu_buffer_reserve_and_commit(ebuffer_t *,cci64_t   resv, cci64_t   comm);
-char *Emu_buffer_insert(ebuffer_t *,cci64_t offset, cci64_t length);
-void  Emu_buffer_remove(ebuffer_t *,cci64_t offset, cci64_t length);
+char *Emu_buffer_reserve_and_commit(EBuffer *,cci64_t   resv, cci64_t   comm);
+char *Emu_buffer_insert(EBuffer *,cci64_t offset, cci64_t length);
+void  Emu_buffer_remove(EBuffer *,cci64_t offset, cci64_t length);
 
 void
 ebuffer_build_lcache(
-  ebuffer_t *buffer);
+  EBuffer *buffer);
 ccinle emarker_t
 Emu_buffer_get_line_at_index(
-  ebuffer_t *buffer, int index);
+  EBuffer *buffer, int index);
 ccinle int
 ebuffer_get_line_length(
-  ebuffer_t *buffer, int yline);
+  EBuffer *buffer, int yline);
 ccinle int
 ebuffer_get_line_offset(
-  ebuffer_t *buffer, int yline);
+  EBuffer *buffer, int yline);

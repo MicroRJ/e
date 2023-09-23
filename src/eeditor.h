@@ -79,7 +79,7 @@ typedef struct {
 /* we can do better #todo */
 	float     *curinf;
 
-	ebuffer_t  buffer;
+	EBuffer  buffer;
 	int        lyview;
 
 	rlFont *font;
@@ -90,12 +90,12 @@ typedef struct {
 
 	float cursor_blink_speed_in_seconds;
 	float cursor_blink_timer;
-} eeditor_t;
+} Editor;
 
 /* this is temporary */
 void
 eeditor_msg(
-eeditor_t *);
+Editor *);
 
 /* this is temporary */
 int
@@ -105,72 +105,72 @@ void *user, int index, int *code, rxcolor_t *color);
 /* cursor */
 int
 enumcur(
-eeditor_t *);
+Editor *);
 int
 eaddcur(
-eeditor_t *, ecursor_t cur);
+Editor *, ecursor_t cur);
 void
 esetcur(
-eeditor_t *, int, ecursor_t cur);
+Editor *, int, ecursor_t cur);
 /* todo: somewhat deprecated, if anything you should get a pointer to signify
 that this is an integral part of the editor, in which case cursors should be
 memory-locked */
 ecursor_t
 egetcur(
-eeditor_t *, int);
+Editor *, int);
 int
 egetcurx(
-eeditor_t *, int);
+Editor *, int);
 int
 egetcury(
-eeditor_t *, int);
+Editor *, int);
 int
 ecurloc(
-eeditor_t *, int);
+Editor *, int);
 char
 ecurchr(
-eeditor_t *, int, int off);
+Editor *, int, int off);
 char *
 ecurptr(
-eeditor_t *, int);
-rlBOX
+Editor *, int);
+boxthing
 ecurrec(
-eeditor_t *, int,
+Editor *, int,
 /* this is temporary, the widget should store this? */
-rlBOX);
+boxthing);
 
 char *
 egetptr(
-eeditor_t *, int index);
+Editor *, int index);
 
 /* commands */
 
 int
 eputchar(
-eeditor_t *,int index, int chr);
+Editor *,int index, int chr);
 void
 edelchar(
-eeditor_t *,int index);
+Editor *,int index);
 
 /* these are to be implemented */
 void
 eaddrow(
-eeditor_t *, int offset, int number);
+Editor *, int offset, int number);
 void
 eremrow(
-eeditor_t *, int offset, int number);
+Editor *, int offset, int number);
 
 void
 eeditor_load(
-eeditor_t *, char const *);
+Editor *, char const *);
 
 int
 eeditor_unload(
-eeditor_t *, char const *);
+Editor *, char const *);
 
 eevent_t
 epopevn(
-eeditor_t *wdg)
+Editor *wdg)
 {
 	eevent_t evn = wdg->event;
 

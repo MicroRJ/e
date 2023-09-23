@@ -298,7 +298,7 @@ rlFont_readNextLigature(char const *s, int *u) {
 	number of glyphs, when rendering, we add the glyphs to this buffer, and we store the
 	draw quad, when we run out of space we flush the buffer */
 void
-rlFont_drawText( Emu_font_text_config_t *config )
+rlFont_drawText( rlFont_Draw_Config *config )
 {
 
 	rlFont *font = config->font;

@@ -171,7 +171,43 @@ typedef struct
 	/* these are optional, not meant for subpixel fonts */
 	float char_height;
 	float line_height;
-} Emu_font_text_config_t;
+} rlFont_Draw_Config;
 
 void
-rlFont_drawText( Emu_font_text_config_t *config );
+rlFont_drawText( rlFont_Draw_Config *config );
+
+
+
+/* [[ REMOVE ]] */
+
+typedef struct
+{
+	struct
+	{
+		int offset_x, offset_y;
+		int stride, height;
+		unsigned char *cursor;
+	} dst;
+
+	struct
+	{
+		int offset_x, offset_y;
+		int stride, height;
+		unsigned char const *cursor;
+	} src;
+
+} Emu_memcpy2d_config_t;
+
+/* #todo */
+ccfunc ccinle void
+rlMem_copy2d( Emu_memcpy2d_config_t *config )
+{
+	for (int y = 0; y < config->src.height; y += 1)
+	{
+		memcpy(
+		config->dst.cursor + config->dst.stride * (y + config->dst.offset_y) + config->dst.offset_x,
+		config->src.cursor + config->src.stride * (y + config->src.offset_y) + config->src.offset_x,
+
+		config->src.stride );
+	}
+}
