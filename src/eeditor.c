@@ -19,62 +19,68 @@
 **
 */
 
-typedef Editor Emu_widget_t;
-
-
 int
-Editor_render(Emu_widget_t *widget, boxthing rect) {
-	int in_rect = cursor_in_rect(rect);
+Editor_render(EEditor *lpEditor, boxthing bx) {
 
-	Editor *editor = widget;
+	rlFont_Face *lpFont = lpEditor->font;
 
-	if (widget->cursor_blink_speed_in_seconds == 0) {
-		widget->cursor_blink_speed_in_seconds = .500;
+	float blink_duration = lpEditor->cursor_blink_speed_in_seconds;
+	if (blink_duration == 0) {
+		blink_duration = .250;
 	}
+	float blink_timer = lpEditor->cursor_blink_timer;
+	blink_timer += rx.delta_seconds;
+	double animation = E_CURSOR_PHASE(lpEditor,blink_timer,blink_duration);
 
-	rlFont *font = editor->font;
-
-	double animation = E_PHASE(widget,widget->cursor_blink_timer,widget->cursor_blink_speed_in_seconds);
-
-	widget->cursor_blink_timer += rx.delta_seconds;
+	lpEditor->cursor_blink_timer = blink_timer;
 
 	/* todo */
-	rxcolor_t color = E_CURSOR_COLOR(widget);
-	color.a = rxclamp(animation,.1,.8);
+	rlColor curcolor = E_CURSOR_COLOR(lpEditor);
+	curcolor.a = rxclamp(animation,.1,.8);
+	float lineHeight = lpFont->line_height;
+	/* [[TODO]]: rename to "firstline" */
+	__int32 yview = lpEditor->lyview;
+	/* [[TODO]]: to become a pointer */
+	EBuffer *lpBuffer = &lpEditor->buffer;
+	emarker_t *lpLines = lpBuffer->lcache;
+	char const *lpBufStr = lpBuffer->string;
+	float spaceW = lpFont->spaceWidth;
 
-	for(int i=0;i<ccarrlen(editor->cursor);i+=1) {
-		boxthing cur_rec = ecurrec(editor,i,rect);
-
-		/* this function should just take an e-rect */
-		Emu_imp_rect_sdf(
-		rxvec2_xy(
-		cur_rec.x0 + (cur_rec.x1 - cur_rec.x0) * .5,
-		cur_rec.y0 + (cur_rec.y1 - cur_rec.y0) * .5),
-		rxvec2_xy(
-		.5*(cur_rec.x1-cur_rec.x0),
-		.5*(cur_rec.y1-cur_rec.y0)) , color, 2.5, 1.);
+	/* [[TODO]]: render only visible cursors */
+	/* [[TODO]]: adapt the size of the cursor the size of the character */
+	for (int i=0;i<enumcur(lpEditor);i+=1) {
+		ECursor cur = egetcur(lpEditor,i);
+		emarker_t line = lpLines[cur.yline];
+		char const *lineStart = lpBufStr + line.offset;
+		float cury = bx.y1 - ((cur.yline - yview + 1) * lineHeight + lpFont->char_height * .2);
+		float curx = bx.x0 + rlFont_getWidth(lpFont,lineStart,cur.xchar);
+		float curw = spaceW;
+		float curh = lpFont->char_height * 1.2;
+		rxvec2_t currad = rxvec2_xy(curw*.5,curh*.5);
+		rxvec2_t curcen = rxvec2_xy(curx+currad.x,cury+currad.y);
+		Emu_imp_rect_sdf(curcen,currad,curcolor,2.5,1.);
 	}
 
-	EBuffer buffer = editor->buffer;
+	EBuffer buffer = lpEditor->buffer;
 
 	rlFont_Draw_Config config;
 	ZeroMemory(&config,sizeof(config));
-	config.font = font;
-	config.x = rect.x0;
-	config.y = rect.y1 - font->line_height;
-	config.char_height = font->char_height;
-	config.line_height = font->line_height;
+	config.font = lpFont;
+	config.x = bx.x0;
+	config.y = bx.y1 - lpFont->line_height;
+	config.char_height = lpFont->char_height;
+	config.line_height = lpFont->line_height;
    config.tab_size = 3; /* in spaces */
-	config.color = RX_RGBA(1,1,1,1);
+	config.color = RX_RGBA(1,1,1,.8);
 	config.color_table = 0;
 	config.length = buffer.length;
 	config.string = buffer.memory;
 	config.colors = NULL;
-	config.line_array = buffer.lcache + editor->lyview;
-	config.line_count = (rect.y1 - rect.y0) / editor->font->line_height + 1;
+	config.line_array = buffer.lcache + yview;
+	config.line_count = (bx.y1 - bx.y0) / lpFont->line_height + 1;
 
-	if(config.line_count > ccarrlen(buffer.lcache)) {
-		config.line_count = ccarrlen(buffer.lcache);
+	if(config.line_count > rlArray_lengthOf(buffer.lcache)) {
+		config.line_count = rlArray_lengthOf(buffer.lcache);
 	}
 
 	rlFont_drawText( &config );
@@ -89,7 +95,7 @@ Editor_render(Emu_widget_t *widget, boxthing rect) {
 
 int
 ecurcmp(
-ecursor_t c0, ecursor_t c1)
+ECursor c0, ECursor c1)
 {
 	return
 	c0.yline != c1.yline ?
@@ -102,10 +108,10 @@ ecursor_t c0, ecursor_t c1)
 
 int
 efndcur(
-Editor *editor, int xchar, int yline)
+EEditor *editor, int xchar, int yline)
 {
   /* todo */
-	for(int i=0; i<ecurnum(editor); i+=1)
+	for(int i=0; i<enumcur(editor); i+=1)
 	{ if( (egetcurx(editor,i) == xchar) &&
 		(egetcury(editor,i) == yline) ) return i;
 }
@@ -116,7 +122,7 @@ return - 1;
 /* probably do not use bubble sort */
 void
 esrtcur(
-Editor *editor)
+EEditor *editor)
 {
 	int sorted;
 
@@ -124,10 +130,10 @@ Editor *editor)
 	{
 		sorted = cctrue;
 
-		for(int i=0; i<ecurnum(editor)-1; i+=1)
+		for(int i=0; i<enumcur(editor)-1; i+=1)
 		{
-			ecursor_t c0 = egetcur(editor,i+0);
-			ecursor_t c1 = egetcur(editor,i+1);
+			ECursor c0 = egetcur(editor,i+0);
+			ECursor c1 = egetcur(editor,i+1);
 
 			int cmp = ecurcmp(c0,c1);
 			if(cmp == +1)
@@ -140,28 +146,20 @@ Editor *editor)
 	} while(sorted != cctrue);
 }
 
-
 int
-eaddcur(
-Editor *editor, ecursor_t cur)
-{
-  /* todo: make this better */
-	*rlArray_add(editor->cursor,1) = cur;
-	*rlArray_add(editor->curinf,1) = 0;
-
-	esrtcur(editor);
-	return efndcur(editor,cur.xchar,cur.yline);
+eaddcur(EEditor *lp, ECursor cur) {
+	*rlArray_add(lp->cursor,1) = cur;
+	esrtcur(lp);
+	return efndcur(lp,cur.xchar,cur.yline);
 }
 
-ccinle int
-ecurloc(
-Editor *wdg, int index)
-{
+int
+ecurloc(EEditor *wdg, int index) {
 	return ebuffer_get_line_offset(&wdg->buffer,egetcury(wdg,index)) + egetcurx(wdg,index);
 }
 
-ccinle char *
-egetptr(Editor *wdg, int index)
+char *
+egetptr(EEditor *wdg, int index)
 {
   /* todo: this should point somewhere safer */
 	ccglobal char p;
@@ -177,60 +175,40 @@ egetptr(Editor *wdg, int index)
 }
 
 ccinle char
-egetchr(Editor *wdg, int offset)
+egetchr(EEditor *wdg, int offset)
 {
 	return *egetptr(wdg,offset);
 }
 
-ccinle char *
-egetptr2(
-Editor *wdg, int xchar, int yline)
-{
-	return egetptr(wdg,ebuffer_get_line_offset(&wdg->buffer,yline)+xchar);
-}
-
-ccinle float
-egetinf(
-Editor *editor, int index)
-{
-	return editor->curinf[index];
-}
-
-ccinle ecursor_t
+ccinle ECursor
 egetcur(
-Editor *editor, int index)
+EEditor *editor, int index)
 {
 	return editor->cursor[index];
 }
 
 ccinle int
 egetcurx(
-Editor *editor, int index)
+EEditor *editor, int index)
 {
 	return egetcur(editor,index).xchar;
 }
 
 ccinle int
 egetcury(
-Editor *editor, int index)
+EEditor *editor, int index)
 {
 	return egetcur(editor,index).yline;
 }
 
-/* todo: */
-/* todo: check for all the cursors with the same coordinates and join them */
 void
-esetcur(
-Editor *editor, int index, ecursor_t cur)
-{
-  /* ensure the cursor is never out of bounds */
-	cur.yline = rlI_clamp(cur.yline,0,
-	ccarrlen(editor->buffer.lcache)-1);
-	cur.xchar = rlI_clamp(cur.xchar,0,
-	ebuffer_get_line_length(&editor->buffer,cur.yline));
+esetcur(EEditor *editor, int index, ECursor cur) {
+	cur.yline = rlI_clamp(cur.yline,0,rlArray_lengthOf(editor->buffer.lcache)-1);
+	cur.xchar = rlI_clamp(cur.xchar,0,ebuffer_get_line_length(&editor->buffer,cur.yline));
+	editor->cursor[index] = cur;
 
-	ecursor_t old = egetcur(editor,index);
-
+#if 0
+	ECursor old = egetcur(editor,index);
 	float inf = egetinf(editor,index);
 
 	if(cur.yline != old.yline)
@@ -245,22 +223,21 @@ Editor *editor, int index, ecursor_t cur)
 		char *ptr = egetptr2(editor,old.xchar,cur.yline);
 		if(cur.xchar > old.xchar)
 		{ for(int i=0;i<cur.xchar-old.xchar;i+=1)
-			inf += efont_code_xadv(editor->font,ptr[i-0]);
+			inf += rlFont_getWidth(editor->font,ptr[i-0]);
 		} else
 		if(cur.xchar < old.xchar)
 		{ for(int i=0;i>cur.xchar-old.xchar;i-=1)
-			inf -= efont_code_xadv(editor->font,ptr[i-1]);
+			inf -= rlFont_getWidth(editor->font,ptr[i-1]);
 		}
 	}
-
-	editor->cursor[index] = cur;
 	editor->curinf[index] = inf;
+#endif
 }
 
 void
-esetcurx(Editor *editor, int index, int xchar)
+esetcurx(EEditor *editor, int index, int xchar)
 {
-	ecursor_t cur = egetcur(editor,index);
+	ECursor cur = egetcur(editor,index);
 
 	cur.xchar = xchar;
 
@@ -268,51 +245,27 @@ esetcurx(Editor *editor, int index, int xchar)
 }
 
 void
-esetcury(Editor *editor, int index, int yline)
+esetcury(EEditor *editor, int index, int yline)
 {
-	ecursor_t cur = egetcur(editor,index);
+	ECursor cur = egetcur(editor,index);
 
 	cur.yline = yline;
 
 	esetcur(editor,index,cur);
 }
 
-ccinle char
-ecurchr(Editor *wdg, int index, int off)
-{
+char
+ecurchr(EEditor *wdg, int index, int off) {
 	return egetchr(wdg,ecurloc(wdg,index) + off);
 }
 
-boxthing
-ecurrec(Editor *wdg, int index, boxthing rect) {
-
-	ecursor_t cur = egetcur(wdg,index);
-	emarker_t row = Emu_buffer_get_line_at_index(&wdg->buffer,cur.yline);
-
-	int curchr = ecurchr(wdg,index,0);
-
-	float y = (cur.yline - wdg->lyview) * wdg->font->line_height;
-	float x = egetinf(wdg,index);
-
-  /* #todo */
-	int cur_xsize = rlI_max(
-	efont_code_width(wdg->font,'.'),
-	efont_code_width(wdg->font,curchr));
-
-	y += wdg->font->char_height * .2;
-
-	float cursor_height = wdg->font->char_height * 1.2;
-
-	return rlMakeBoxBySize(rect.x0+x,rect.y1-y-wdg->font->line_height,cur_xsize,cursor_height);
-}
-
-ecursor_t
-emovcurx(Editor *editor, int cursor, int mov) {
-	ecursor_t cur = egetcur(editor,cursor);
+ECursor
+emovcurx(EEditor *editor, int cursor, int mov) {
+	ECursor cur = egetcur(editor,cursor);
 
 	if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline)) {
-		if(cur.yline + 1 <= ccarrlen(editor->buffer.lcache) - 1)
-		{ cur.yline += 1;
+		if(cur.yline + 1 <= rlArray_lengthOf(editor->buffer.lcache) - 1) {
+			cur.yline += 1;
 			cur.xchar  = 0;
 		}
 	} else
@@ -332,233 +285,165 @@ emovcurx(Editor *editor, int cursor, int mov) {
 
 void
 emovcury(
-Editor *editor, int index, int mov)
+EEditor *editor, int index, int mov)
 {
 	esetcury(editor,index,egetcury(editor,index)+mov);
 }
 
 void
-eaddchr_(
-Editor *wdg, int cursor, int length)
-{
-	ecursor_t cur = egetcur(wdg,cursor);
-
-  // if(cur.event.type != kCHAR)
-	{
-    /* if there's no event do not store */
-		if(wdg->event.type != E_kNONE)
-		{
-			*rlArray_add(wdg->trail,1) = wdg->event;
-		}
-
-		wdg->event.type   = E_kCHAR;
-		wdg->event.cursor = egetcur(wdg,cursor);
-		wdg->event.length = 0;
-
-  }/* then */
-
-		wdg->event.length += length;
-	}
+eaddchr_(EEditor *wdg, int cursor, int length) {
+}
 
 
-	void
-	Editor_keyOne(Editor *wdg, E_KEY key) {
+void
+Editor_keyOne(EEditor *wdg, E_KEY key) {
 
-		ecursor_t cursor = egetcur(wdg,key.cur);
-		int off = ecurloc(wdg,key.cur);
-		int dir = 0;
-		int cur = key.cur;
-		int num = key.num;
-		int chr = key.chr;
-		switch(key.key) {
-			case E_kMOVE_LEFT: case E_kMOVE_RIGHT: {
-				wdg->cursor_blink_timer = 0;
-				dir = +1;
-				if (key.key == E_kMOVE_LEFT) {
-					off += (dir = -1);
-				}
-				if (key.mod & E_MOD_CTRL_BIT) {
-					if (IS_WORD_DELIMETER(egetchr(wdg,off))) {
-						while (egetchr(wdg,off)!=0 && IS_WORD_DELIMETER(egetchr(wdg,off))) {
-							emovcurx(wdg,cur,dir); off += dir;
-						}
-					} else {
-						while (egetchr(wdg,off)!=0 && !IS_WORD_DELIMETER(egetchr(wdg,off))) {
-							emovcurx(wdg,cur,dir); off += dir;
-						}
+	ECursor cursor = egetcur(wdg,key.cur);
+	int off = ecurloc(wdg,key.cur);
+	int dir = 0;
+	int cur = key.cur;
+	int num = key.num;
+	int chr = key.chr;
+	switch(key.kid) {
+		case E_kMOVE_LEFT:
+		case E_kMOVE_RIGHT: {
+			wdg->cursor_blink_timer = 0;
+			dir = +1;
+			if (key.kid == E_kMOVE_LEFT) {
+				off += (dir = -1);
+			}
+			if (key.mod & E_MOD_CTRL_BIT) {
+				if (E_IS_WORD_DELI(egetchr(wdg,off))) {
+					while (egetchr(wdg,off)!=0 && E_IS_WORD_DELI(egetchr(wdg,off))) {
+						emovcurx(wdg,cur,dir); off += dir;
 					}
 				} else {
-					emovcurx(wdg,cur,dir);
+					while (egetchr(wdg,off)!=0 && !E_IS_WORD_DELI(egetchr(wdg,off))) {
+						emovcurx(wdg,cur,dir); off += dir;
+					}
 				}
-			} break;
-			case E_kMOVE_LINE_RIGHT:
-			{
-				esetcurx(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
-			} break;
-			case E_kMOVE_LINE_LEFT:
-			{
-				esetcurx(wdg,cur,0);
-			} break;
-			case E_kDELETE_BACK:
+			} else {
+				emovcurx(wdg,cur,dir);
+			}
+		} break;
+		case E_kMOVE_LINE_RIGHT: {
+			esetcurx(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
+		} break;
+		case E_kMOVE_LINE_LEFT: {
+			esetcurx(wdg,cur,0);
+		} break;
+
+		case E_kDELETE_BACK: {
 			off += (dir = - 1);
-    /* fall-through */
-			case E_kDELETE_HERE:
-			if( off >= 0 && off + num <= wdg->buffer.length)
-			{
-				wdg->cursor_blink_timer = 0;
+		}
+    	/* fall-through */
+		case E_kDELETE_HERE:
 
-				char *ptr = egetptr(wdg,off);
+		if (wdg->isReadonly) {
+			return;
+		}
 
-      /* delete the entire line feed, as supposed to just breaking it */
-				if((ptr[0 + dir] == '\r') &&
-				(ptr[1 + dir] == '\n'))
-				{
-					off += dir;
-					num += 1;
-				}
+		if (off >= 0 && off + num <= wdg->buffer.length) {
+			wdg->cursor_blink_timer = 0;
+
+			char *ptr = egetptr(wdg,off);
+
+      	/* delete the entire line feed, as supposed to just breaking it */
+			if((ptr[0 + dir] == '\r') && (ptr[1 + dir] == '\n')) {
+				off += dir;
+				num += 1;
+			}
 
       /* gotta move the cursor first */
-				emovcurx(wdg,cur,dir*num);
+			emovcurx(wdg,cur,dir*num);
 
-				EBuffer_insertSize(&wdg->buffer,off,-num);
-				Emu_buffer_rescan_lines(&wdg->buffer);
+			EBuffer_insertSize(&wdg->buffer,off,-num);
+			EBuffer_reformat(&wdg->buffer);
 
-			} break;
-			case E_kCHAR: {
-				wdg->cursor_blink_timer = 0;
-				E_ASSERT(chr != '\r' && chr != '\n' );
+		} break;
+		case E_kCHAR: {
+			if (wdg->isReadonly) {
+				return;
+			}
 
-				int mov = 1;
-				int end = 0;
+			wdg->cursor_blink_timer = 0;
+			E_ASSERT(chr != '\r' && chr != '\n' );
 
-				if(chr >= 0x80) {
-					chr = '?';
-					end =   0;
-					mov =   1;
-				} else
-		/* [[TODO]]: should be based off of user's settings */
-				if (chr == '\t') {
-					chr = ' ';
-					end = ' ';
-					mov =   2;
-				} else
-				switch(chr) {
-					case '{': end = '}'; break;
-					case '[': end = ']'; break;
-					case '(': end = ')'; break;
-					case '}':
-					case ']':
-					case ')':
-	  /* if the cursor is already hovering over any of these
-	   and the user types one of them, simply move the cursor to the right */
-					if(egetchr(wdg,off) == chr)
-					{
-						mov = 1;
-						chr = 0;
-						end = 0;
-					} break;
+			int mov = 1;
+			int end = 0;
+
+			if(chr >= 0x80) {
+				chr = '?';
+				end =   0;
+				mov =   1;
+			} else
+			if (chr == '\t') {
+				chr = ' ';
+				end = ' ';
+				mov =   2;
+			} else
+			switch(chr) {
+				case '{': end = '}'; break;
+				case '[': end = ']'; break;
+				case '(': end = ')'; break;
+				case '}':
+				case ']':
+				case ')':
+				if(egetchr(wdg,off) == chr) {
+					mov = 1;
+					chr = 0;
+					end = 0;
+				} break;
+			}
+
+			if (chr != 0) {
+				num = end != 0 ? 2 : 1;
+
+				char *ptr = EBuffer_insertSize(&wdg->buffer,off,num);
+				ptr[0] = chr;
+
+				if (end != 0) {
+					ptr[1] = end;
 				}
 
-				if(chr != 0)
-				{
-					num = end!=0?2:1;
-
-					char *ptr = EBuffer_insertSize(&wdg->buffer,off,num);
-					ptr[0] = chr;
-
-					if(end != 0)
-					ptr[1] = end;
-
-        /* notify of the event and then move the index */
+        		/* notify of the event and then move the index */
 				eaddchr_(wdg,off,num);
-				Emu_buffer_rescan_lines(&wdg->buffer);
+				EBuffer_reformat(&wdg->buffer);
 			}
 
 			emovcurx(wdg,cur,mov);
 		} break;
-		case E_kLINE:
-		{
+		case E_kLINE: {
+			if (wdg->isReadonly) {
+				return;
+			}
       /* this is syntax specific #todo */
-			if(egetchr(wdg,off-1) == '{')
-			num += 1;
+			if(egetchr(wdg,off-1) == '{') {
+				num += 1;
+			}
 
-		char *ptr = EBuffer_insertSize(&wdg->buffer,off,num*2);
+			char *ptr = EBuffer_insertSize(&wdg->buffer,off,num*2);
 
       /* proper line end feed #todo */
-		while(num -- != 0)
-		{
-			ptr[num*2+0] = '\r';
-			ptr[num*2+1] = '\n';
-		}
+			while(num -- != 0) {
+				ptr[num*2+0] = '\r';
+				ptr[num*2+1] = '\n';
+			}
 
       // eaddrow(wdg,egetcury(wdg,index),num);
 
-		eaddchr_(wdg,cur,num*2);
-		emovcury(wdg,cur,    1);
-		esetcurx(wdg,cur,    0);
+			eaddchr_(wdg,cur,num*2);
+			emovcury(wdg,cur,    1);
+			esetcurx(wdg,cur,    0);
 
-		Emu_buffer_rescan_lines(&wdg->buffer);
-	} break;
-}
-}
-
-void
-eeditor_load(
-Editor *editor, char const *name)
-{
-	if(name != 0 && strlen(name) != 0)
-	{
-		void *file = ccopenfile(name,"r");
-		ccu32_t length = 0;
-		void *memory = ccpullfile(file,0,&length);
-
-		if(memory != 0)
-		{
-			EBuffer_uninit(&editor->buffer);
-			EBuffer_initSized(&editor->buffer,name,length);
-
-			memcpy(editor->buffer.string,memory,length);
-
-			Emu_buffer_rescan_lines(&editor->buffer);
-		}
+			EBuffer_reformat(&wdg->buffer);
+		} break;
 	}
 }
 
-/* todo: this shouldn't be platform specific */
-int
-eeditor_unload(
-Editor *editor, char const *name)
-{
-	int result = ccfalse;
-
-  /* todo: this should be safer */
-	if((name != 0) && (strlen(name) != 0))
-	{
-		HANDLE file = CreateFileA(name,
-		GENERIC_WRITE,FILE_SHARE_WRITE|FILE_SHARE_READ,0x00,CREATE_ALWAYS,0x00,0x00);
-
-		if(file != INVALID_HANDLE_VALUE)
-		{
-			DWORD length = 0;
-
-      /* todo: convert indentations to white space here? */
-			if(WriteFile(file,
-			editor->buffer.string,
-			editor->buffer.length,&length,0x00))
-			{
-				result = length == editor->buffer.length;
-			}
-
-			CloseHandle(file);
-		}
-	}
-
-
-	return result;
-}
 
 void
-Editor_testKeys(Editor *editor) {
+Editor_testKeys(EEditor *editor) {
 
 	int mod = 0;
 
@@ -573,8 +458,8 @@ Editor_testKeys(Editor *editor) {
 		mod |= E_MOD_SHIFT_BIT;
 	}
 
-	if(IS_CLICK_ENTER(0))
-	{
+	if(IS_CLICK_ENTER(0)) {
+		#if 0
 		int xcursor = + rx.wnd.in.mice.xcursor;
 		int ycursor = - rx.wnd.in.mice.ycursor + rx.wnd.size_y;
 
@@ -586,17 +471,17 @@ Editor_testKeys(Editor *editor) {
 		float xwalk = 0;
 		for(int xchar=0; xchar<line.length; xchar+=1)
 		{
-			float width = efont_code_xadv(editor->font,string[xchar]);
+			float width = rlFont_getWidth(editor->font,string[xchar]);
 
 			if(xcursor >= xwalk && xcursor <= xwalk + width)
 			{
-				esetcur(editor,0,(ecursor_t){xchar,yline});
+				esetcur(editor,0,(ECursor){xchar,yline});
 				break;
 			}
 
 			xwalk += width;
 		}
-
+#endif
 	} else
 	if(rlIO_testCtrlKey() && rlIO_testKey('Z')) {
 	} else
@@ -611,7 +496,7 @@ Editor_testKeys(Editor *editor) {
 	{
     /* scroll up */
 		editor->lyview += rlIO_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
-		editor->lyview  = rlI_clamp(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
+		editor->lyview  = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
 	} else
 	if(rlIO_testKey(rx_kHOME))
 	{
@@ -624,7 +509,7 @@ Editor_testKeys(Editor *editor) {
 	} else
 	if(rlIO_testCtrlKey() && rlIO_testKey('X'))
 	{
-		for(int i=ecurnum(editor)-1;i>=0;i-=1)
+		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		{
 			emarker_t row = Emu_buffer_get_line_at_index(&editor->buffer,egetcury(editor,i));
 
@@ -635,7 +520,7 @@ Editor_testKeys(Editor *editor) {
 			(ptr[1]=='\n')) num += 1;
 
 			EBuffer_insertSize(&editor->buffer,row.offset,-(row.length+num));
-		Emu_buffer_rescan_lines(&editor->buffer);
+		EBuffer_reformat(&editor->buffer);
 	}
 
 } else
@@ -643,7 +528,7 @@ if(rlIO_testKey(rx_kKEY_UP))
 {
 	if(rlIO_testCtrlKey() && rlIO_testAltKey())
 	{
-		ecursor_t cur = egetcur(editor,0);
+		ECursor cur = egetcur(editor,0);
 		cur.yline -= 1;
 		eaddcur(editor,cur);
 	} else
@@ -651,11 +536,11 @@ if(rlIO_testKey(rx_kKEY_UP))
 	{
       /* scroll up */
 		editor->lyview -= rlIO_testShiftKey() ? 16 : 1;
-		editor->lyview  = rlI_clamp(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
+		editor->lyview  = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
 	} else
 	{
       /* move to the line above */
-		for(int i=ecurnum(editor)-1;i>=0;i-=1)
+		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		emovcury(editor,i,-1);
 }
 } else
@@ -663,7 +548,7 @@ if(rlIO_testKey(rx_kKEY_DOWN))
 {
 	if(rlIO_testCtrlKey() && rlIO_testAltKey())
 	{
-		ecursor_t cur = egetcur(editor,ecurnum(editor)-1);
+		ECursor cur = egetcur(editor,enumcur(editor)-1);
 		cur.yline += 1;
 		eaddcur(editor,cur);
 	} else
@@ -671,11 +556,11 @@ if(rlIO_testKey(rx_kKEY_DOWN))
 	{
       /* scroll down */
 		editor->lyview += rlIO_testShiftKey() ? 16 : 1;
-		editor->lyview = rlI_clamp(editor->lyview,0,ccarrlen(editor->buffer.lcache)-1);
+		editor->lyview = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
 	} else
 	{
       /* move to the line below */
-		for(int i=ecurnum(editor)-1;i>=0;i-=1)
+		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		emovcury(editor,i,+1);
 }
 } else

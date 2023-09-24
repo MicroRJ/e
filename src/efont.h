@@ -19,12 +19,20 @@
 **
 */
 
-typedef struct rlGlyphPallet rlGlyphPallet;
+/* note: '/LIBPATH:<where>' tell the compiler where to find freetype */
+#pragma comment(lib,"freetype")
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+/* [[TODO]] */
+#define rlFONT_LOG_ERROR(fmt,...)
+
+typedef struct rlFont_Pallet rlFont_Pallet;
 
 /* fonts api only supports ascii characters at the moment and horizontal
 	layouts */
 typedef struct {
-	rlGlyphPallet *pallet;
+	rlFont_Pallet *pallet;
 	int external_index;
 	int utf32;
 	short x0;
@@ -34,73 +42,40 @@ typedef struct {
 	short offset_x;
 	short offset_y;
 	float walking_x;
-} rlFontGlyph;
+} rlFont_Glyph;
 
-// typedef struct
-// {
-// 	rlFontGlyph *glyph;
-
-// 	rxvec2_t p0, p1, p2, p3;
-// 	float u0, v0, u1, v1;
-// } Emu_font_quad_t;
-
-typedef struct
-{
-	rlGlyphPallet *pallet;
-
+/* [[NOTE]]: glyphs are laid out horizontally within buckets */
+typedef struct {
+	rlFont_Pallet *pallet;
 	short height;
-  /* buckets allocate bitmap space horizontally */
 	short cursor_x;
-
-  /* each bucket needs to remember where they are in the pallet */
 	short cursor_y;
-} rlGlyphBucket;
+} rlFont_Bucket;
 
-typedef struct rlGlyphPallet
-{
-	rlTexture       *texture;
-	rlImage storage;
+/* [[NOTE]]: buckets are laid out vertically within pallets */
+typedef struct rlFont_Pallet {
+
+	/* [[TODO]]: there's probably a better way to do this */
+	rlTexture *texture;
+	rlImage 	  storage;
 
 	unsigned dirty: 1;
 
-  /* buckets are sorted in ascending order, if you find a suitable
-  	bucket go for it, it is the optimal size, maybe... if the bucket
-  	is still too big you have to create a new one since all the other
-  	ones are bigger */
-	rlGlyphBucket **buckets;
-
-  /* pallets allocate bitmap space vertically */
+  	/* [[TODO]]: sort buckets? */
+	rlFont_Bucket **buckets;
 	short cursor_y;
-} rlGlyphPallet;
-
-
-/* #todo */
-typedef struct
-{ struct
-	{ char const *file;
-		void       *memory;
-		int         length;
-	} ttf;
-	int         char_start;
-	int         char_end;
-	char const *char_string;
-
-	int edge_value;
-	int pixels_per_unit;
-	int padding;
-	int supports_subpixel;
-	int supports_sdf;
-} Emu_glyph_font_config_t;
+} rlFont_Pallet;
 
 /* everything is expressed in a y-upwards coordinate system */
-typedef struct
-{
+typedef struct {
 	char const *fpath;
 
-	rlFontGlyph **glyph_table;
+	rlFont_Glyph **glyph_table;
 
 	float char_height;
 	float line_height;
+
+	float spaceWidth;
 
 	float ascent;
 	float descent;
@@ -115,47 +90,43 @@ typedef struct
 	float underline_baseline_offset;
 	float underline_thickness;
 
-	struct
-	{
+	struct {
 		FT_Face face;
 	} freetype;
 
-	struct
-	{
-		stbtt_fontinfo face;
-	} stb;
-} rlFont;
+	// struct {
+	// 	stbtt_fontinfo face;
+	// } stb;
+} rlFont_Face;
 
-rlFont *
-rlFont_loadFromFile(
-char const *fpath, float char_height);
+rlFont_Face *rlFont_loadFromFile(char const *fileName, float height);
+rlFont_Glyph *rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32);
 
 struct {
 
-	rlFont **fonts;
-	rlGlyphPallet **pallets;
+	rlFont_Face   **fonts;
+	rlFont_Pallet **pallets;
 
 } ccglobal emu_Font_Library;
 
-typedef struct
-{
-	int offset;
-	int length;
-
-} Emu_text_line_t;
+typedef struct {
+	/* [[TODO]]: only the offset is needed */
+	__int32 offset;
+	__int32 length;
+} rlFont_Line;
 
 /* is either the font knows about the renderer or the renderer knows about the font
 	or this becomes a separate file #pending */
 typedef struct
 {
-	rlFont *font;
+	rlFont_Face *font;
 	float             x,y;
 
 	int tab_size; /* in spaces */
 
-	rxcolor_t color;
+	rlColor color;
 
-	rxcolor_t *color_table;
+	rlColor *color_table;
 
 	int              length;
 	char const     * string;
@@ -163,8 +134,8 @@ typedef struct
 
 	/* should you choose to use .array to draw several lines,
 		.string, .colors and .length must be large enough to accomodate all
-		lines, set colors to null to use .color instead */
-	Emu_text_line_t *line_array;
+		lines, set colors or null to use .color instead */
+	rlFont_Line *line_array;
 
 	int line_count;
 
@@ -210,4 +181,71 @@ rlMem_copy2d( Emu_memcpy2d_config_t *config )
 
 		config->src.stride );
 	}
+}
+
+
+/* [[IMPLEMENTATION]] */
+
+rlFont_Face *
+rlFont_loadFromFile(char const *fileName, float height) {
+
+	FT_Library library_ft;
+	if (FT_Init_FreeType(&library_ft)) {
+		rlFONT_LOG_ERROR("failed to init FreeType");
+	}
+
+	FT_Face face_ft;
+	if (FT_New_Face(library_ft,fileName,0,&face_ft)) {
+		rlFONT_LOG_ERROR("failed to load file path");
+	}
+
+	if (FT_Set_Pixel_Sizes(face_ft,0,height)) {
+		rlFONT_LOG_ERROR("invalid pixel size");
+	}
+
+	/* 16.16 to 24.6 to ..32.. */
+	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
+	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
+
+	rlFont_Face *font = rlMemory_allocType(rlFont_Face);
+
+	font->is_subpixel = TRUE;
+	font->is_sdf = FALSE;
+	font->fpath = fileName;
+	font->glyph_table = NULL;
+	font->ascent = face_ft->ascender * units_to_pixels;
+	font->descent = face_ft->descender * units_to_pixels;
+	font->lineGap = lineGap * units_to_pixels;
+	font->line_height = height;
+	font->char_height = height;
+	font->freetype.face = face_ft;
+
+	rlFont_Glyph *underscoreGlyph = rlFont_findOrMakeGlyphByUnicode(font,'_');
+	rlFont_Glyph *spaceGlyph = rlFont_findOrMakeGlyphByUnicode(font,' ');
+	if (spaceGlyph == NULL) {
+		spaceGlyph = underscoreGlyph;
+	}
+	font->spaceWidth = spaceGlyph->walking_x;
+	return font;
+}
+
+
+float
+rlFont_getWidth(rlFont_Face *lpFont, char const *lpStr, int length) {
+	float result = 0.;
+	float spaceW = lpFont->spaceWidth;
+	for (int i=0; i<length; i+=1) {
+		int chr = lpStr[i];
+		if E_IS_BLANK(chr) {
+			if (chr == '\t') {
+				result += spaceW * 3;
+			} else {
+				result += spaceW;
+			}
+		} else {
+			rlFont_Glyph *lpGlyph = rlFont_findOrMakeGlyphByUnicode(lpFont,chr);
+			result += lpGlyph->walking_x;
+		}
+	}
+	return result;
 }

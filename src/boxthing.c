@@ -111,46 +111,6 @@ rect_padd(boxthing rect, float xpadd, float ypadd)
 
 
 
-/* TODO: formalize this */
-static boxthing boxStack[0x20];
-static boxthing *curBoxen;
-
-#define inibox() (curBoxen = boxStack)
-#define dupbox() (curBoxen[1] = curBoxen[0], curBoxen += 1)
-#define popbox() (curBoxen -= 1)
-#define getbox() (*curBoxen)
-#define setbox(xx) (getbox() = (xx))
-
-void
-putbox(boxthing xx) {
-	/* this has to be a function, operand has to be evaluated first and only once */
-	(dupbox(),setbox(xx));
-}
-
-#define isnobox() Or(getbox().y1<=getbox().y0, getbox().x1<=getbox().x0)
-
-/* TODO: this should clip too */
-#define cutbox(side,size) rlBoxCut(curBoxen,FUSE(boxen_,side),size)
-
-
-#define newrow() putbox(cutbox(top,elPaint.font->line_height*1.2))
-#define endrow() popbox()
-
-#define newcol(side,size) putbox(cutbox(side,size))
-#define endcol() popbox()
-
-#define setboxtxt(xx) elUI_drawTextLine(*curBoxen,xx);
-#define setboxtxtf(ff,...) elUI_drawTextLine(*curBoxen,elCS_tmpFormat(ff,__VA_ARGS__));
-
-#define setcol(xx,yy) do {\
-/* */elPaint.textColor = xx;\
-/* */elPaint.textColor.r *= yy;\
-/* */elPaint.textColor.g *= yy;\
-/* */elPaint.textColor.b *= yy;\
-} while(0)
-
-
-
 
 
 
@@ -164,13 +124,8 @@ is_click_leave_rect(boxthing rect) {
 	return IS_CLICK_LEAVE(0) && cursor_in_rect(rect);
 }
 
-int
-rlIO_testHitbox(boxthing rect) {
-	return IS_CLICK_ENTER(0) && cursor_in_rect(rect);
-}
-
 void
-rlDrawRect(boxthing rect, rxcolor_t color) {
+rlDrawRect(boxthing rect, rlColor color) {
 	Emu_imp_rect(color,rect.x0,rect.y0,(rect.x1-rect.x0),(rect.y1-rect.y0));
 }
 

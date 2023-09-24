@@ -42,7 +42,6 @@ EBuffer_initSized(EBuffer *lpBuffer, char const *tag, cci64_t length) {
 
 void
 EBuffer_uninit(EBuffer *buffer) {
-
 	E_FREE_ALIGNED(buffer->string);
 	E_FREE_ALIGNED(buffer->colors);
 	buffer->length = 0;
@@ -103,16 +102,16 @@ EBuffer_insertSize(EBuffer *buffer, __int64 offset, __int64 length) {
 
 /* could this be done automatically #todo */
 void
-Emu_buffer_rescan_lines(EBuffer *buffer) {
+EBuffer_reformat(EBuffer *buffer) {
 
 	char *cursor = buffer->string;
   /* todo */
-	earray_delete(buffer->lcache);
+	rlArray_delete(buffer->lcache);
 	buffer->lcache = 0;
 
 	int indent = 0;
 	for(;;) {
-		emarker_t *line = earray_add(buffer->lcache,1);
+		emarker_t *line = rlArray_add(buffer->lcache,1);
 		line->offset = (cursor - buffer->string);
 
 		while((cursor < buffer->string + buffer->length) &&

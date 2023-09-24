@@ -19,48 +19,43 @@
 **
 */
 
-#define earray_length(arr) ccarrlen(arr)
-#define earray_add(arr,num) rlArray_add(arr,num)
+#define rlArray_remove(arr,off,num) ((arr) + earray_remove_((void**)(&arr),sizeof(*arr),off,num))
+#define rlArray_insert(arr,off,num) ((arr) + earray_insert_((void**)(&arr),sizeof(*arr),off,num))
 
-#define earray_delete(arr) ccarrdel(arr)
-
-#define earray_remove(arr,off,num) ((arr) + earray_remove_((void**)(&arr),sizeof(*arr),off,num))
-#define earray_insert(arr,off,num) ((arr) + earray_insert_((void**)(&arr),sizeof(*arr),off,num))
-
-cci64_t
-earray_remove_(void **lpp, cci32_t itm, cci64_t off, cci64_t num)
+__int64
+earray_remove_(void **lpp, __int32 itemSize, __int64 off, __int64 num)
 {
-  ccdlb_t *dlb = ccdlb_(*lpp);
+	ccdlb_t *dlb = ccdlb_(*lpp);
 
-  char *mem = *lpp;
+	char *mem = *lpp;
 
-  if(off != dlb->sze_min)
-  {
-    memmove(
-      mem + itm * off,
-      mem + itm * (off + num), itm * (dlb->sze_min - off - num));
-  }
+	if(off != dlb->sze_min)
+	{
+		memmove(
+		mem + itemSize * off,
+		mem + itemSize * (off + num), itemSize * (dlb->sze_min - off - num));
+	}
 
-  dlb->sze_min -= num;
+	dlb->sze_min -= num;
 
-  return off;
+	return off;
 }
 
-cci64_t
-earray_insert_(void **lpp, cci32_t itm, cci64_t off, cci64_t num)
+__int64
+earray_insert_(void **lpp, __int32 itemSize, __int64 off, __int64 num)
 {
-  ccdlbadd_(lpp,itm,num,num);
+	ccdlbadd_(lpp,itemSize,num,num);
 
-  ccdlb_t *dlb = ccdlb_(*lpp);
+	ccdlb_t *dlb = ccdlb_(*lpp);
 
-  char *mem = *lpp;
+	char *mem = *lpp;
 
-  if(off != dlb->sze_min)
-  {
-    memmove(
-      mem + itm * (off + num),
-      mem + itm * off, dlb->sze_min - off - num);
-  }
+	if(off != dlb->sze_min)
+	{
+		memmove(
+		mem + itemSize * (off + num),
+		mem + itemSize * off, dlb->sze_min - off - num);
+	}
 
-  return off;
+	return off;
 }
