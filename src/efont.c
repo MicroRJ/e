@@ -21,13 +21,13 @@
 
 /* trying this out, see if I like it #pending */
 #define each_in(decl_type,decl_name,arr)\
-(decl_type decl_name = arr; decl_name < ccarrend(arr); decl_name += 1)
+(decl_type decl_name = arr; decl_name < arrend(arr); decl_name += 1)
 
-rlFont_Glyph *
+rxFont_Glyph *
 rlFont_makeGlyph(rlFont_Pallet *pallet, int index, int utf32
 ,	short x0, short y0, short x1, short y1, short offset_x, short offset_y, float walking_x)
 {
-	rlFont_Glyph glyph;
+	rxFont_Glyph glyph;
 	glyph.pallet = pallet;
 	glyph.external_index = index;
 	glyph.utf32 = utf32;
@@ -39,7 +39,7 @@ rlFont_makeGlyph(rlFont_Pallet *pallet, int index, int utf32
 	glyph.offset_y = offset_y;
 	glyph.walking_x = walking_x;
 
-	rlFont_Glyph *result = rlMemory_allocType(rlFont_Glyph);
+	rxFont_Glyph *result = EMU_ALLOC_TYPE(rxFont_Glyph);
 	*result = glyph;
 	return result;
 }
@@ -54,7 +54,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 		rlFont_Pallet *pallet = *pallet_;
 
-		rlImage storage = pallet->storage;
+		rx_Image storage = pallet->storage;
 
 		if(storage.size_y < height) {
 			continue;
@@ -109,7 +109,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 		}
 
 		/* maybe sort the array #todo #pending */
-		result = rlMemory_allocType(rlFont_Bucket);
+		result = EMU_ALLOC_TYPE(rlFont_Bucket);
 
 		if(result != NULL) {
 
@@ -118,7 +118,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 			result->cursor_x = 0;
 			result->cursor_y = pallet->cursor_y;
 
-			*rlArray_add(pallet->buckets,1) = result;
+			*arradd(pallet->buckets,1) = result;
 		}
 
 		pallet->cursor_y += height;
@@ -130,16 +130,16 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 	if(result == NULL)
 	{
-		rlFont_Pallet *pallet = rlMemory_allocType(rlFont_Pallet);
+		rlFont_Pallet *pallet = EMU_ALLOC_TYPE(rlFont_Pallet);
 		pallet->buckets = NULL;
 		pallet->texture = NULL;
-		pallet->storage = rlCPU_makeImage(1024,1024,EMU_FORMAT_R8_UNORM);
+		pallet->storage = rx_makeImage(1024,1024,EMU_FORMAT_R8_UNORM);
 		pallet->cursor_y = 0;
 
-		*rlArray_add(emu_Font_Library.pallets,1) = pallet;
+		*arradd(emu_Font_Library.pallets,1) = pallet;
 
 		/* maybe sort the array #todo #pending */
-		result = rlMemory_allocType(rlFont_Bucket);
+		result = EMU_ALLOC_TYPE(rlFont_Bucket);
 		result->pallet = pallet;
 		result->height = height;
 		result->cursor_x = 0;
@@ -147,9 +147,9 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 		pallet->cursor_y += height;
 
-		*rlArray_add(pallet->buckets,1) = result;
+		*arradd(pallet->buckets,1) = result;
 
-		ccassert(result != NULL);
+		rx_assert(result != NULL);
 	}
 
 	if(result != NULL) {
@@ -168,7 +168,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 	return result;
 }
 
-rlFont_Glyph *
+rxFont_Glyph *
 rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 
 	FT_GlyphSlot glyph = NULL;
@@ -228,7 +228,7 @@ rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 
 	L_backdoor:
 
-	rlFont_Glyph *lpGlyph;
+	rxFont_Glyph *lpGlyph;
 	if (glyph == NULL) {
 		lpGlyph = rlFont_makeGlyph(lpPallet,glyph_index,utf32,0,0,0,0,0,0,0);
 	} else {
@@ -238,23 +238,23 @@ rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 		, 	glyph->advance.x/64.);
 	}
 
-	*rlArray_add(lpFont->glyph_table,1) = lpGlyph;
+	*arradd(lpFont->glyph_table,1) = lpGlyph;
 
 	return lpGlyph;
 }
 
-rlFont_Glyph *
+rxFont_Glyph *
 rlFont_makeGlyphFromName (rlFont_Face *lpFont, char const *lpName, int utf32) {
 
 	return rlFont_makeGlyphFromIndex(lpFont,FT_Get_Name_Index(lpFont->freetype.face,lpName),utf32);
 }
 
-rlFont_Glyph *
+rxFont_Glyph *
 rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32) {
 
 	/* [[SPEED]] */
-	for each_in(rlFont_Glyph **, it_, lpFont->glyph_table) {
-		rlFont_Glyph *it = *it_;
+	for each_in(rxFont_Glyph **, it_, lpFont->glyph_table) {
+		rxFont_Glyph *it = *it_;
 		if (it != NULL) {
 			if (it->utf32 == utf32) {
 				return it;
@@ -300,83 +300,88 @@ rlFont_readNextLigature(char const *s, int *u) {
 	number of glyphs, when rendering, we add the glyphs to this buffer, and we store the
 	draw quad, when we run out of space we flush the buffer */
 void
-rlFont_drawText( rlFont_Draw_Config *config )
-{
+rx_drawText( rxTTF_DRAW *lpConfig ) {
+	rlFont_Face *lpFont = lpConfig->lpFont;
 
-	rlFont_Face *font = config->font;
-
-	/* setup emu::imp */
-	int mode = EMU_IMP_MODE_2D;
-
-	if (font->is_subpixel) {
-		mode = EMU_IMP_MODE_LCD_TEXT;
-	} else
-	if (font->is_sdf) {
-		mode = EMU_IMP_MODE_SDF_TEXT;
+	if (lpConfig->char_height == 0.) {
+		lpConfig->char_height = lpFont->char_height;
+	}
+	if (lpConfig->line_height == 0.) {
+		lpConfig->line_height = lpFont->line_height;
 	}
 
-	float scale = config->char_height / font->char_height;
+	float scale = lpConfig->char_height / lpFont->char_height;
 
-	float line_height = config->line_height;
+	float line_height = lpConfig->line_height;
 
-	float unwiden = 1. / (font->is_subpixel ? 3. : 1.);
+	float unwiden = 1. / (lpFont->is_subpixel ? 3. : 1.);
 
-	unsigned char *colors = config->colors;
+	unsigned char *colors = lpConfig->colors;
 
-	char const *string = config->string;
+	char const *string = lpConfig->string;
 
-	int length = config->length;
+	rlColor color = lpConfig->color;
 
-	rlColor color = config->color;
+	rlColor *color_table = lpConfig->color_table;
 
-	rlColor *color_table = config->color_table;
-
-	float y = config->y;
-
-	Emu_imp_apply(mode,FALSE);
 
 	rlFont_Line single_line;
 	single_line.offset = 0;
-	single_line.length = config->length;
-	if(config->line_array == NULL) {
-		config->line_array = & single_line;
-		config->line_count = 1;
+	single_line.length = lpConfig->length;
+	if(lpConfig->line_array == NULL) {
+		lpConfig->line_array = & single_line;
+		lpConfig->line_count = 1;
 	}
 
+	int mode = rxIMP_MODE_2D;
+	if (lpFont->is_subpixel) {
+		mode = rxIMP_MODE_LCD_TEXT;
+	} else
+	if (lpFont->is_sdf) {
+		mode = rxIMP_MODE_SDF_TEXT;
+	}
+	rxIMP_applyMode(mode,FALSE);
+
+	rlFont_Line *line_array = lpConfig->line_array;
+	int line_count = lpConfig->line_count;
+
+	float y = lpConfig->y;
+
 	rlFont_Line *it;
-	for ( it = config->line_array; it < config->line_array + config->line_count; it += 1 )
-	{
-		if(it->offset + it->length > config->length) {
-			continue;
+	for (it = line_array; it < line_array + line_count; it += 1) {
+		__int64 offset = it->offset;
+		__int64 length = it->length;
+		if (length < 0) {
+			break;
 		}
+		if (offset < 0) {
+			break;
+		}
+		if (offset + length > lpConfig->length) {
+			break;
+		}
+		float x = lpConfig->x;
 
-		float x = config->x;
-
-		for(int iii = 0; iii < it->length;) {
+		for(int iii = 0; iii < length;) {
 			/* todo */
 
 			/* todo: this won't work properly with colors */
 			int xchar = iii;
 
 			int utf32;
-			iii += rlFont_readNextLigature(string+(it->offset+iii),&utf32);
-
-			rlFont_Glyph *glyph = rlFont_findOrMakeGlyphByUnicode(font,utf32);
-
+			iii += rlFont_readNextLigature(string+(offset+iii),&utf32);
+			rxFont_Glyph *glyph = rlFont_findOrMakeGlyphByUnicode(lpFont,utf32);
 			if (glyph == NULL) {
 				goto L_skip_rendering;
 			}
-
+			if E_IS_BLANK(utf32) {
+				goto L_skip_rendering;
+			}
 			if (glyph->walking_x == 0.) {
 				goto L_skip_rendering;
 			}
 
-			if E_IS_BLANK(utf32) {
-				goto L_skip_rendering;
-			}
-
 			rlFont_Pallet *pallet = glyph->pallet;
-
 			if (pallet == NULL) {
 				continue;
 			}
@@ -385,11 +390,10 @@ rlFont_drawText( rlFont_Draw_Config *config )
 			  to be added and then finally update the texture #todo #urgent */
 			if (pallet->dirty) {
 				pallet->dirty = FALSE;
-
 				if(pallet->texture == NULL) {
-					pallet->texture = rlCPU_uploadImage(pallet->storage);
+					pallet->texture = rx_loadImageFromFile(pallet->storage);
 				} else {
-					rlGPU_updateTexture(pallet->texture,pallet->storage);
+					rxGPU_updateTexture(pallet->texture,pallet->storage);
 				}
 			}
 
@@ -397,7 +401,7 @@ rlFont_drawText( rlFont_Draw_Config *config )
 				continue;
 			}
 
-			rxpipset_texture(REG_PS_TEX_0,pallet->texture,FALSE);
+			rxIMP_setTexture(rxPIPREG_kPS_TEX_0,pallet->texture,FALSE);
 
 			if (color_table != NULL) {
 				color = color_table[colors[it->offset + xchar]];
@@ -426,7 +430,7 @@ rlFont_drawText( rlFont_Draw_Config *config )
 			L_skip_rendering:
 
 			if (glyph == NULL || glyph->walking_x == 0.) {
-				glyph = rlFont_findOrMakeGlyphByUnicode(font,'_');
+				glyph = rlFont_findOrMakeGlyphByUnicode(lpFont,'_');
 			}
 			float walking_x = glyph->walking_x;
 
@@ -461,14 +465,14 @@ rlFont_drawText( rlFont_Draw_Config *config )
   void *fileMemory = EMU_load_file_data(filePath,&fileLength);
 
   if IS_NULL(fileMemory) {
-	 cctraceerr("failed to load file");
+	 rxLOG_error("failed to load file");
 	 goto leave;
   }
 
   /* store this for the dynamically adding glyphs and such */
   stbtt_fontinfo fontInfo;
   if(stbtt_InitFont(&fontInfo,fileMemory,0) == 0) {
-	 cctraceerr("failed to init font");
+	 rxLOG_error("failed to init font");
 	 goto leave;
   }
 
@@ -486,8 +490,8 @@ rlFont_drawText( rlFont_Draw_Config *config )
   descentInPixels = descentEm * emToPixels,
   lineGapInPixels = lineGapEm * emToPixels;
   glyphArray = NULL;
-  glyphAtlas = rlGPU_makeTexture(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
-  atlasMemory = rlGPU_borrowTexture(glyphAtlas);
+  glyphAtlas = rxGPU_makeTexture(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
+  atlasMemory = rxGPU_borrowTexture(glyphAtlas);
 
   /* widen the glyphs to prepare for sub-pixel rendering, subsequent renderers
 	 must take this into account #noteworthy we could also get rid of it by simply
@@ -507,7 +511,7 @@ rlFont_drawText( rlFont_Draw_Config *config )
 		  rune  < glyphEnd;    rune += 1 )
   {
 	 /* we have to add the glyph even if the character is invisible #todo */
-	 rlFont_Glyph *data = rlArray_add(glyphArray,1);
+	 rxFont_Glyph *data = arradd(glyphArray,1);
 
 	 int advanceWidthEm = 0;
 	 int leftSideBearingEm = 0;

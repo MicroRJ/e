@@ -39,40 +39,35 @@ typedef union boxthing {
 } boxthing;
 
 boxthing
-rlMakeBox(float x0, float y0, float x1, float y1) {
+makeboxthing(float x0, float y0, float x1, float y1) {
 	boxthing rect;
 	rect.x0 = x0; rect.x1 = x1;
 	rect.y0 = y0; rect.y1 = y1;
 	return rect;
 }
 
-boxthing
-rlMakeBoxBySize(float x, float y, float xx, float yy)	{
-	return rlMakeBox(x,y,x+xx,y+yy);
-}
-
 /* todo: remove */
 boxthing
 rlBoxCut(boxthing *wndBox, int mode, float size) {
-	boxthing result = rlMakeBoxBySize(0,0,0,0);
+	boxthing result = makeboxthing(0,0,0,0);
 	switch(mode) {
 		case boxen_top:{
-			result = rlMakeBox(wndBox->x0,wndBox->y1-size,wndBox->x1,wndBox->y1);
+			result = makeboxthing(wndBox->x0,wndBox->y1-size,wndBox->x1,wndBox->y1);
 			wndBox->y1 -= size;
 		} break;
 		case boxen_bot:{
-			result = rlMakeBox(wndBox->x0,wndBox->y0,wndBox->x1,wndBox->y0+size);
+			result = makeboxthing(wndBox->x0,wndBox->y0,wndBox->x1,wndBox->y0+size);
 			wndBox->y0 += size;
 		} break;
 		case boxen_right:{
-			result = rlMakeBox(wndBox->x1-size,wndBox->y0,wndBox->x1,wndBox->y1);
+			result = makeboxthing(wndBox->x1-size,wndBox->y0,wndBox->x1,wndBox->y1);
 			wndBox->x1 -= size;
 		} break;
 		case boxen_left:{
 			if (size == -1) {
 				size = wndBox->x1 - wndBox->x0;
 			}
-			result = rlMakeBox(wndBox->x0,wndBox->y0,wndBox->x0+size,wndBox->y1);
+			result = makeboxthing(wndBox->x0,wndBox->y0,wndBox->x0+size,wndBox->y1);
 			wndBox->x0 += size;
 		} break;
 	}
@@ -80,7 +75,7 @@ rlBoxCut(boxthing *wndBox, int mode, float size) {
 }
 
 
-float
+int
 rect_in_xy(boxthing rect, float x, float y) {
 	return
 	((x >= rect.x0) && (y >= rect.y0)) &&
@@ -102,7 +97,7 @@ boxthing
 rect_padd(boxthing rect, float xpadd, float ypadd)
 {
 	return
-	rlMakeBox(
+	makeboxthing(
 	rect.x0 + (xpadd * .5),
 	rect.y0 + (ypadd * .5),
 	rect.x1 - (xpadd * .5),
@@ -131,6 +126,6 @@ rlDrawRect(boxthing rect, rlColor color) {
 
 void
 set_clip_rect(boxthing rect) {
-  //rximp_clip(
+  //rxGPU_setClip(
   //  rect.x0,rect.y0,rect.x1,rect.y1);
 }

@@ -31,7 +31,7 @@ EBuffer_setFileName(EBuffer *lpBuffer, char const *lpName) {
 
 
 void
-EBuffer_initSized(EBuffer *lpBuffer, char const *tag, cci64_t length) {
+EBuffer_initSized(EBuffer *lpBuffer, char const *tag, __int64 length) {
 	EBuffer_setName(lpBuffer,tag);
 
 	if(length) {
@@ -41,11 +41,13 @@ EBuffer_initSized(EBuffer *lpBuffer, char const *tag, cci64_t length) {
 }
 
 void
-EBuffer_uninit(EBuffer *buffer) {
-	E_FREE_ALIGNED(buffer->string);
-	E_FREE_ALIGNED(buffer->colors);
-	buffer->length = 0;
-	buffer->extent = 0;
+EBuffer_uninit(EBuffer *lpBuffer) {
+	E_FREE_ALIGNED(lpBuffer->string);
+	E_FREE_ALIGNED(lpBuffer->colors);
+	lpBuffer->length = 0;
+	lpBuffer->extent = 0;
+	lpBuffer->string = 0;
+	lpBuffer->colors = 0;
 }
 
 char *
@@ -106,12 +108,12 @@ EBuffer_reformat(EBuffer *buffer) {
 
 	char *cursor = buffer->string;
   /* todo */
-	rlArray_delete(buffer->lcache);
+	arrdel(buffer->lcache);
 	buffer->lcache = 0;
 
 	int indent = 0;
 	for(;;) {
-		emarker_t *line = rlArray_add(buffer->lcache,1);
+		emarker_t *line = arradd(buffer->lcache,1);
 		line->offset = (cursor - buffer->string);
 
 		while((cursor < buffer->string + buffer->length) &&
@@ -130,15 +132,15 @@ EBuffer_reformat(EBuffer *buffer) {
 	}
 }
 
-ccassert(cursor == buffer->string + buffer->length);
+rx_assert(cursor == buffer->string + buffer->length);
 }
 
-ccinle emarker_t
+inline emarker_t
 Emu_buffer_get_line_at_index(
 EBuffer *buffer, int index)
 {
   /* remove, this should not happen? */
-	if(buffer->lcache == ccnull)
+	if(buffer->lcache == rxNull)
 	{
 		emarker_t row;
 		row.length = 0;
@@ -149,14 +151,14 @@ EBuffer *buffer, int index)
 	return buffer->lcache[index];
 }
 
-ccinle int
+inline int
 ebuffer_get_line_offset(
 EBuffer *buffer, int yline)
 {
 	return Emu_buffer_get_line_at_index(buffer,yline).offset;
 }
 
-ccinle int
+inline int
 ebuffer_get_line_length(
 EBuffer *buffer, int yline)
 {

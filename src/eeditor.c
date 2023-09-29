@@ -36,7 +36,7 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 
 	/* todo */
 	rlColor curcolor = E_CURSOR_COLOR(lpEditor);
-	curcolor.a = rxclamp(animation,.1,.8);
+	curcolor.a = clamp(animation,.1,.8);
 	float lineHeight = lpFont->line_height;
 	/* [[TODO]]: rename to "firstline" */
 	__int32 yview = lpEditor->lyview;
@@ -63,7 +63,7 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 
 	EBuffer buffer = lpEditor->buffer;
 
-	rlFont_Draw_Config config;
+	rxTTF_DRAW config;
 	ZeroMemory(&config,sizeof(config));
 	config.font = lpFont;
 	config.x = bx.x0;
@@ -71,7 +71,7 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 	config.char_height = lpFont->char_height;
 	config.line_height = lpFont->line_height;
    config.tab_size = 3; /* in spaces */
-	config.color = RX_RGBA(1,1,1,.8);
+	config.color = rxColor_RGBA(1,1,1,.8);
 	config.color_table = 0;
 	config.length = buffer.length;
 	config.string = buffer.memory;
@@ -79,13 +79,13 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 	config.line_array = buffer.lcache + yview;
 	config.line_count = (bx.y1 - bx.y0) / lpFont->line_height + 1;
 
-	if(config.line_count > rlArray_lengthOf(buffer.lcache)) {
-		config.line_count = rlArray_lengthOf(buffer.lcache);
+	if(config.line_count > arrlen(buffer.lcache)) {
+		config.line_count = arrlen(buffer.lcache);
 	}
 
-	rlFont_drawText( &config );
+	rx_drawText( &config );
 
-	return ccfalse;
+	return rxFalse;
 }
 
 
@@ -128,7 +128,7 @@ EEditor *editor)
 
 	do
 	{
-		sorted = cctrue;
+		sorted = rxTrue;
 
 		for(int i=0; i<enumcur(editor)-1; i+=1)
 		{
@@ -140,15 +140,15 @@ EEditor *editor)
 			{ esetcur(editor,i+0,c1);
 				esetcur(editor,i+1,c0);
 
-				sorted = ccfalse;
+				sorted = rxFalse;
 			}
 		}
-	} while(sorted != cctrue);
+	} while(sorted != rxTrue);
 }
 
 int
 eaddcur(EEditor *lp, ECursor cur) {
-	*rlArray_add(lp->cursor,1) = cur;
+	*arradd(lp->cursor,1) = cur;
 	esrtcur(lp);
 	return efndcur(lp,cur.xchar,cur.yline);
 }
@@ -162,7 +162,7 @@ char *
 egetptr(EEditor *wdg, int index)
 {
   /* todo: this should point somewhere safer */
-	ccglobal char p;
+	rxGlobal char p;
 
   p = 0; /* in case it was overwritten */
 
@@ -174,27 +174,27 @@ egetptr(EEditor *wdg, int index)
 	return &p;
 }
 
-ccinle char
+inline char
 egetchr(EEditor *wdg, int offset)
 {
 	return *egetptr(wdg,offset);
 }
 
-ccinle ECursor
+inline ECursor
 egetcur(
 EEditor *editor, int index)
 {
 	return editor->cursor[index];
 }
 
-ccinle int
+inline int
 egetcurx(
 EEditor *editor, int index)
 {
 	return egetcur(editor,index).xchar;
 }
 
-ccinle int
+inline int
 egetcury(
 EEditor *editor, int index)
 {
@@ -203,8 +203,8 @@ EEditor *editor, int index)
 
 void
 esetcur(EEditor *editor, int index, ECursor cur) {
-	cur.yline = rlI_clamp(cur.yline,0,rlArray_lengthOf(editor->buffer.lcache)-1);
-	cur.xchar = rlI_clamp(cur.xchar,0,ebuffer_get_line_length(&editor->buffer,cur.yline));
+	cur.yline = iclamp(cur.yline,0,arrlen(editor->buffer.lcache)-1);
+	cur.xchar = iclamp(cur.xchar,0,ebuffer_get_line_length(&editor->buffer,cur.yline));
 	editor->cursor[index] = cur;
 
 #if 0
@@ -264,7 +264,7 @@ emovcurx(EEditor *editor, int cursor, int mov) {
 	ECursor cur = egetcur(editor,cursor);
 
 	if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline)) {
-		if(cur.yline + 1 <= rlArray_lengthOf(editor->buffer.lcache) - 1) {
+		if(cur.yline + 1 <= arrlen(editor->buffer.lcache) - 1) {
 			cur.yline += 1;
 			cur.xchar  = 0;
 		}
@@ -448,13 +448,13 @@ Editor_testKeys(EEditor *editor) {
 	int mod = 0;
 
 	/* [[todo]]: why doesn't rl just use a flag for this */
-	if rlIO_testCtrlKey() {
+	if rx_testCtrlKey() {
 		mod |= E_MOD_CTRL_BIT;
 	}
-	if rlIO_testAltKey() {
+	if rx_testAltKey() {
 		mod |= E_MOD_ALT_BIT;
 	}
-	if rlIO_testShiftKey() {
+	if rx_testShiftKey() {
 		mod |= E_MOD_SHIFT_BIT;
 	}
 
@@ -483,31 +483,31 @@ Editor_testKeys(EEditor *editor) {
 		}
 #endif
 	} else
-	if(rlIO_testCtrlKey() && rlIO_testKey('Z')) {
+	if(rx_testCtrlKey() && rx_testKey('Z')) {
 	} else
-	if(rlIO_testKey(rx_kESCAPE))
+	if(rx_testKey(rx_kESCAPE))
 	{
     /* todo */
-		ccdlb_t *dlb = ccdlb(editor->cursor);
+		dlb_t *dlb = ccdlb(editor->cursor);
 		dlb->sze_min = 1;
 
 	} else
 	if(rx.wnd.in.mice.yscroll != 0)
 	{
     /* scroll up */
-		editor->lyview += rlIO_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
-		editor->lyview  = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
+		editor->lyview += rx_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
+		editor->lyview  = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
-	if(rlIO_testKey(rx_kHOME))
+	if(rx_testKey(rx_kHOME))
 	{
 		Editor_handleKey(editor,E_kMOVE_LINE_LEFT,1,0);
 
 	} else
-	if(rlIO_testKey(rx_kEND))
+	if(rx_testKey(rx_kEND))
 	{
 		Editor_handleKey(editor,E_kMOVE_LINE_RIGHT,1,0);
 	} else
-	if(rlIO_testCtrlKey() && rlIO_testKey('X'))
+	if(rx_testCtrlKey() && rx_testKey('X'))
 	{
 		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		{
@@ -524,19 +524,19 @@ Editor_testKeys(EEditor *editor) {
 	}
 
 } else
-if(rlIO_testKey(rx_kKEY_UP))
+if(rx_testKey(rxKEY_kUP))
 {
-	if(rlIO_testCtrlKey() && rlIO_testAltKey())
+	if(rx_testCtrlKey() && rx_testAltKey())
 	{
 		ECursor cur = egetcur(editor,0);
 		cur.yline -= 1;
 		eaddcur(editor,cur);
 	} else
-	if(rlIO_testCtrlKey())
+	if(rx_testCtrlKey())
 	{
       /* scroll up */
-		editor->lyview -= rlIO_testShiftKey() ? 16 : 1;
-		editor->lyview  = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
+		editor->lyview -= rx_testShiftKey() ? 16 : 1;
+		editor->lyview  = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
 	{
       /* move to the line above */
@@ -544,19 +544,19 @@ if(rlIO_testKey(rx_kKEY_UP))
 		emovcury(editor,i,-1);
 }
 } else
-if(rlIO_testKey(rx_kKEY_DOWN))
+if(rx_testKey(rxKEY_kDOWN))
 {
-	if(rlIO_testCtrlKey() && rlIO_testAltKey())
+	if(rx_testCtrlKey() && rx_testAltKey())
 	{
 		ECursor cur = egetcur(editor,enumcur(editor)-1);
 		cur.yline += 1;
 		eaddcur(editor,cur);
 	} else
-	if(rlIO_testCtrlKey())
+	if(rx_testCtrlKey())
 	{
       /* scroll down */
-		editor->lyview += rlIO_testShiftKey() ? 16 : 1;
-		editor->lyview = rlI_clamp(editor->lyview,0,rlArray_lengthOf(editor->buffer.lcache)-1);
+		editor->lyview += rx_testShiftKey() ? 16 : 1;
+		editor->lyview = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
 	{
       /* move to the line below */
@@ -564,28 +564,28 @@ if(rlIO_testKey(rx_kKEY_DOWN))
 		emovcury(editor,i,+1);
 }
 } else
-if(rlIO_testKey(rx_kKEY_LEFT))
+if(rx_testKey(rxKEY_kLEFT))
 { Editor_handleKey(editor,E_kMOVE_LEFT,   1,0);
 } else
-if(rlIO_testKey(rx_kKEY_RIGHT))
+if(rx_testKey(rxKEY_kRIGHT))
 {
 	Editor_handleKey(editor,E_kMOVE_RIGHT, 1,0);
 } else
-if(rlIO_testKey(rx_kDELETE))
+if(rx_testKey(rx_kDELETE))
 { Editor_handleKey(editor,E_kDELETE_HERE,1,0);
 } else
-if(rlIO_testKey(rx_kBCKSPC))
+if(rx_testKey(rx_kBCKSPC))
 { Editor_handleKey(editor,E_kDELETE_BACK,1,0);
 } else
-if(rlIO_testKey(rx_kRETURN))
+if(rx_testKey(rxKEY_kRETURN))
 {
 	Editor_handleKey(editor,E_kLINE,1,0);
 } else
-{ if(!rlIO_testCtrlKey())
+{ if(!rx_testCtrlKey())
 	{
-		if(rxchr() != 0)
+		if(rx_testChar() != 0)
 		{
-			Editor_handleKey(editor,E_kCHAR,1,rxchr());
+			Editor_handleKey(editor,E_kCHAR,1,rx_testChar());
 		}
 	}
 }

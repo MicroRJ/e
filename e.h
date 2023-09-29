@@ -36,11 +36,11 @@ typedef signed int 			  __int32;
 
 /* TODO: */
 #ifndef E_ASSERT
-#define E_ASSERT ccassert
+#define E_ASSERT rx_assert
 # endif
 
 #ifndef E_IS_ALPNUM
-#define E_IS_ALPNUM(r) (CCWITHIN(r,'a','z')||CCWITHIN(r,'A','Z')||CCWITHIN(r,'0','9')||(r)== '_')
+#define E_IS_ALPNUM(r) (isWithin(r,'a','z')||isWithin(r,'A','Z')||isWithin(r,'0','9')||(r)== '_')
 # endif
 
 #ifndef E_IS_BLANK
@@ -75,7 +75,7 @@ typedef signed int 			  __int32;
 #define E_COLOR rlColor
 # endif
 #ifndef E_MK_COLOR_RGBA_UNORM
-#define E_MK_COLOR_RGBA_UNORM RX_RGBA_UNORM
+#define E_MK_COLOR_RGBA_UNORM rxColor_RGBA_U
 # endif
 
 #ifndef E_DRAW
@@ -231,7 +231,7 @@ void draw_single_text_line(rlFont_Face *font, float x, float y, char const *stri
 		string += 1;
 	}
 
-	rlFont_Draw_Config config;
+	rxTTF_DRAW config;
 	ZeroMemory(&config,sizeof(config));
 	config.font = font;
 	config.x = x;
@@ -239,13 +239,13 @@ void draw_single_text_line(rlFont_Face *font, float x, float y, char const *stri
 	config.char_height = font->char_height;
 	config.line_height = font->line_height;
    config.tab_size = 2; /* in spaces */
-	config.color = RX_RGBA_UNORM(8,36,36,255);
+	config.color = rxColor_RGBA_U(8,36,36,255);
 	config.color_table = NULL;
 	config.length = length;
 	config.string = string;
 	config.colors = NULL;
 
-	rlFont_drawText( &config );
+	rx_drawText( &config );
 }
 
 

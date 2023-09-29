@@ -53,9 +53,9 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	rl_initWindowed(L"e");
+	rxinit(L"e");
 
-	rlFont_Face *font = rlFont_loadFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
+	rlFont_Face *font = rx_loadFontFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
 	EEditor editor;
 	ZeroMemory(&editor,sizeof(editor));
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
 	eeditor_load(&editor,"todo.txt");
 
-  // rlTexture *glyphTexture = editor.font.glyphAtlas;
+  // rxGPU_Texture *glyphTexture = editor.font.glyphAtlas;
 
 	int debug_overlay = 0;
 	int searching = 0;
@@ -74,44 +74,44 @@ int main(int argc, char **argv)
 	{
 
 #if 1
-		if(rlIO_testKey(rx_kKEY_F5))
+		if(rx_testKey(rxKEY_kF5))
 		{
 			RunCommandString("build.msvc.template.bat e TRUE");
 		} else
-		if(rlIO_testKey(rx_kKEY_F1))
+		if(rx_testKey(rxKEY_kF1))
 		{
 			eeditor_unload(&editor,editor.buffer.tag);
 		} else
-		if(rlIO_testKey(rx_kKEY_F7))
+		if(rx_testKey(rxKEY_kF7))
 		{ debug_overlay = !debug_overlay;
 		} else
-		if(rlIO_testKey(rx_kKEY_F9))
+		if(rx_testKey(rxKEY_kF9))
 		{
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testAltKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_UP))
+		if(rx_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && rx_testKey(rxKEY_kUP))
 		{
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testAltKey() && rlIO_testShiftKey() && rlIO_testKey(rx_kKEY_DOWN))
+		if(rx_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && rx_testKey(rxKEY_kDOWN))
 		{
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testKey('O')) {
+		if(rx_testCtrlKey() && rx_testKey('O')) {
 			eeditor_load(&editor,fdlg());
 		} else
-		if(rlIO_testCtrlKey() && rlIO_testKey('S')) {
+		if(rx_testCtrlKey() && rx_testKey('S')) {
 			eeditor_unload(&editor,fdlg());
 		} else
 		{
 		}
-		boxthing rect = rlMakeBoxBySize(0,0,rx.wnd.size_x,rx.wnd.size_y);
+		boxthing rect = makeboxthing(0,0,rx.wnd.size_x,rx.wnd.size_y);
 		boxthing r = rlGetWindowClientBox();
-		rlDrawRect(r,RX_RGBA_UNORM(8,36,36,255));
+		rlDrawRect(r,rxColor_RGBA_U(8,36,36,255));
 		Editor_render(&editor,r);
 #endif
 
     /* todo: this is something that rx should do intrinsically */
 		Sleep(8);
 
-	} while(rlTick());
+	} while(rxtick());
 
 	return 0;
 }
@@ -143,7 +143,7 @@ EEditor *editor, char const *name)
 int
 eeditor_unload(EEditor *editor, char const *name)
 {
-	int result = ccfalse;
+	int result = rxFalse;
 
   /* todo: this should be safer */
 	if((name != 0) && (strlen(name) != 0))

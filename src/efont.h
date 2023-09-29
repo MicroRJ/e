@@ -42,7 +42,7 @@ typedef struct {
 	short offset_x;
 	short offset_y;
 	float walking_x;
-} rlFont_Glyph;
+} rxFont_Glyph;
 
 /* [[NOTE]]: glyphs are laid out horizontally within buckets */
 typedef struct {
@@ -56,8 +56,8 @@ typedef struct {
 typedef struct rlFont_Pallet {
 
 	/* [[TODO]]: there's probably a better way to do this */
-	rlTexture *texture;
-	rlImage 	  storage;
+	rxGPU_Texture *texture;
+	rx_Image 	  storage;
 
 	unsigned dirty: 1;
 
@@ -70,7 +70,7 @@ typedef struct rlFont_Pallet {
 typedef struct {
 	char const *fpath;
 
-	rlFont_Glyph **glyph_table;
+	rxFont_Glyph **glyph_table;
 
 	float char_height;
 	float line_height;
@@ -99,15 +99,15 @@ typedef struct {
 	// } stb;
 } rlFont_Face;
 
-rlFont_Face *rlFont_loadFromFile(char const *fileName, float height);
-rlFont_Glyph *rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32);
+rlFont_Face *rx_loadFontFromFile(char const *fileName, float height);
+rxFont_Glyph *rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32);
 
 struct {
 
 	rlFont_Face   **fonts;
 	rlFont_Pallet **pallets;
 
-} ccglobal emu_Font_Library;
+} rxGlobal emu_Font_Library;
 
 typedef struct {
 	/* [[TODO]]: only the offset is needed */
@@ -117,9 +117,11 @@ typedef struct {
 
 /* is either the font knows about the renderer or the renderer knows about the font
 	or this becomes a separate file #pending */
-typedef struct
-{
-	rlFont_Face *font;
+typedef struct {
+	union {
+		rlFont_Face *font;
+		rlFont_Face *lpFont;
+	};
 	float             x,y;
 
 	int tab_size; /* in spaces */
@@ -139,13 +141,14 @@ typedef struct
 
 	int line_count;
 
-	/* these are optional, not meant for subpixel fonts */
-	float char_height;
 	float line_height;
-} rlFont_Draw_Config;
+
+	/* optional, not meant for subpixel fonts */
+	float char_height;
+} rxTTF_DRAW;
 
 void
-rlFont_drawText( rlFont_Draw_Config *config );
+rx_drawText( rxTTF_DRAW *config );
 
 
 
@@ -170,7 +173,7 @@ typedef struct
 } Emu_memcpy2d_config_t;
 
 /* #todo */
-ccfunc ccinle void
+rxAPI inline void
 rlMem_copy2d( Emu_memcpy2d_config_t *config )
 {
 	for (int y = 0; y < config->src.height; y += 1)
@@ -187,7 +190,7 @@ rlMem_copy2d( Emu_memcpy2d_config_t *config )
 /* [[IMPLEMENTATION]] */
 
 rlFont_Face *
-rlFont_loadFromFile(char const *fileName, float height) {
+rx_loadFontFromFile(char const *fileName, float height) {
 
 	FT_Library library_ft;
 	if (FT_Init_FreeType(&library_ft)) {
@@ -207,7 +210,7 @@ rlFont_loadFromFile(char const *fileName, float height) {
 	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
 	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
 
-	rlFont_Face *font = rlMemory_allocType(rlFont_Face);
+	rlFont_Face *font = EMU_ALLOC_TYPE(rlFont_Face);
 
 	font->is_subpixel = TRUE;
 	font->is_sdf = FALSE;
@@ -220,8 +223,8 @@ rlFont_loadFromFile(char const *fileName, float height) {
 	font->char_height = height;
 	font->freetype.face = face_ft;
 
-	rlFont_Glyph *underscoreGlyph = rlFont_findOrMakeGlyphByUnicode(font,'_');
-	rlFont_Glyph *spaceGlyph = rlFont_findOrMakeGlyphByUnicode(font,' ');
+	rxFont_Glyph *underscoreGlyph = rlFont_findOrMakeGlyphByUnicode(font,'_');
+	rxFont_Glyph *spaceGlyph = rlFont_findOrMakeGlyphByUnicode(font,' ');
 	if (spaceGlyph == NULL) {
 		spaceGlyph = underscoreGlyph;
 	}
@@ -243,7 +246,7 @@ rlFont_getWidth(rlFont_Face *lpFont, char const *lpStr, int length) {
 				result += spaceW;
 			}
 		} else {
-			rlFont_Glyph *lpGlyph = rlFont_findOrMakeGlyphByUnicode(lpFont,chr);
+			rxFont_Glyph *lpGlyph = rlFont_findOrMakeGlyphByUnicode(lpFont,chr);
 			result += lpGlyph->walking_x;
 		}
 	}

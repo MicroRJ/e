@@ -45,6 +45,6 @@ Editor_handleKey(EEditor *lp, E_KID kid, int num, int chr) {
 
 int
 enumcur(EEditor *editor) {
-	return rlArray_lengthOf(editor->cursor);
+	return arrlen(editor->cursor);
 }
 

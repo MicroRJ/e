@@ -25,7 +25,7 @@
 __int64
 earray_remove_(void **lpp, __int32 itemSize, __int64 off, __int64 num)
 {
-	ccdlb_t *dlb = ccdlb_(*lpp);
+	dlb_t *dlb = ccdlb_(*lpp);
 
 	char *mem = *lpp;
 
@@ -46,7 +46,7 @@ earray_insert_(void **lpp, __int32 itemSize, __int64 off, __int64 num)
 {
 	ccdlbadd_(lpp,itemSize,num,num);
 
-	ccdlb_t *dlb = ccdlb_(*lpp);
+	dlb_t *dlb = ccdlb_(*lpp);
 
 	char *mem = *lpp;
 
