@@ -391,7 +391,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 			if (pallet->dirty) {
 				pallet->dirty = FALSE;
 				if(pallet->texture == NULL) {
-					pallet->texture = rx_loadImageFromFile(pallet->storage);
+					pallet->texture = rx_uploadimage(pallet->storage);
 				} else {
 					rxGPU_updateTexture(pallet->texture,pallet->storage);
 				}
