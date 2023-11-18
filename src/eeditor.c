@@ -20,9 +20,9 @@
 */
 
 int
-Editor_render(EEditor *lpEditor, boxthing bx) {
+lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 
-	rlFont_Face *lpFont = lpEditor->font;
+	lui_Font *lpFont = lpEditor->font;
 
 	float blink_duration = lpEditor->cursor_blink_speed_in_seconds;
 	if (blink_duration == 0) {
@@ -41,19 +41,19 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 	/* [[TODO]]: rename to "firstline" */
 	__int32 yview = lpEditor->lyview;
 	/* [[TODO]]: to become a pointer */
-	EBuffer *lpBuffer = &lpEditor->buffer;
-	emarker_t *lpLines = lpBuffer->lcache;
+	lui_Buffer *lpBuffer = &lpEditor->buffer;
+	lui_TextLine *lpLines = lpBuffer->lcache;
 	char const *lpBufStr = lpBuffer->string;
 	float spaceW = lpFont->spaceWidth;
 
 	/* [[TODO]]: render only visible cursors */
 	/* [[TODO]]: adapt the size of the cursor the size of the character */
 	for (int i=0;i<enumcur(lpEditor);i+=1) {
-		ECursor cur = egetcur(lpEditor,i);
-		emarker_t line = lpLines[cur.yline];
+		lui_Cursor cur = egetcur(lpEditor,i);
+		lui_TextLine line = lpLines[cur.yline];
 		char const *lineStart = lpBufStr + line.offset;
 		float cury = bx.y1 - ((cur.yline - yview + 1) * lineHeight + lpFont->char_height * .2);
-		float curx = bx.x0 + rlFont_getWidth(lpFont,lineStart,cur.xchar);
+		float curx = bx.x0 + lui_getTextWidth(lpFont,lineStart,cur.xchar);
 		float curw = spaceW;
 		float curh = lpFont->char_height * 1.2;
 		rxvec2_t currad = rxvec2_xy(curw*.5,curh*.5);
@@ -61,7 +61,7 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 		Emu_imp_rect_sdf(curcen,currad,curcolor,2.5,1.);
 	}
 
-	EBuffer buffer = lpEditor->buffer;
+	lui_Buffer buffer = lpEditor->buffer;
 
 	rxTTF_DRAW config;
 	ZeroMemory(&config,sizeof(config));
@@ -95,7 +95,7 @@ Editor_render(EEditor *lpEditor, boxthing bx) {
 
 int
 ecurcmp(
-ECursor c0, ECursor c1)
+lui_Cursor c0, lui_Cursor c1)
 {
 	return
 	c0.yline != c1.yline ?
@@ -108,7 +108,7 @@ ECursor c0, ECursor c1)
 
 int
 efndcur(
-EEditor *editor, int xchar, int yline)
+lui_Editor *editor, int xchar, int yline)
 {
   /* todo */
 	for(int i=0; i<enumcur(editor); i+=1)
@@ -122,7 +122,7 @@ return - 1;
 /* probably do not use bubble sort */
 void
 esrtcur(
-EEditor *editor)
+lui_Editor *editor)
 {
 	int sorted;
 
@@ -132,8 +132,8 @@ EEditor *editor)
 
 		for(int i=0; i<enumcur(editor)-1; i+=1)
 		{
-			ECursor c0 = egetcur(editor,i+0);
-			ECursor c1 = egetcur(editor,i+1);
+			lui_Cursor c0 = egetcur(editor,i+0);
+			lui_Cursor c1 = egetcur(editor,i+1);
 
 			int cmp = ecurcmp(c0,c1);
 			if(cmp == +1)
@@ -147,19 +147,19 @@ EEditor *editor)
 }
 
 int
-eaddcur(EEditor *lp, ECursor cur) {
+eaddcur(lui_Editor *lp, lui_Cursor cur) {
 	*arradd(lp->cursor,1) = cur;
 	esrtcur(lp);
 	return efndcur(lp,cur.xchar,cur.yline);
 }
 
 int
-ecurloc(EEditor *wdg, int index) {
+ecurloc(lui_Editor *wdg, int index) {
 	return ebuffer_get_line_offset(&wdg->buffer,egetcury(wdg,index)) + egetcurx(wdg,index);
 }
 
 char *
-egetptr(EEditor *wdg, int index)
+egetptr(lui_Editor *wdg, int index)
 {
   /* todo: this should point somewhere safer */
 	rxGlobal char p;
@@ -175,40 +175,40 @@ egetptr(EEditor *wdg, int index)
 }
 
 inline char
-egetchr(EEditor *wdg, int offset)
+egetchr(lui_Editor *wdg, int offset)
 {
 	return *egetptr(wdg,offset);
 }
 
-inline ECursor
+inline lui_Cursor
 egetcur(
-EEditor *editor, int index)
+lui_Editor *editor, int index)
 {
 	return editor->cursor[index];
 }
 
 inline int
 egetcurx(
-EEditor *editor, int index)
+lui_Editor *editor, int index)
 {
 	return egetcur(editor,index).xchar;
 }
 
 inline int
 egetcury(
-EEditor *editor, int index)
+lui_Editor *editor, int index)
 {
 	return egetcur(editor,index).yline;
 }
 
 void
-esetcur(EEditor *editor, int index, ECursor cur) {
+esetcur(lui_Editor *editor, int index, lui_Cursor cur) {
 	cur.yline = iclamp(cur.yline,0,arrlen(editor->buffer.lcache)-1);
 	cur.xchar = iclamp(cur.xchar,0,ebuffer_get_line_length(&editor->buffer,cur.yline));
 	editor->cursor[index] = cur;
 
 #if 0
-	ECursor old = egetcur(editor,index);
+	lui_Cursor old = egetcur(editor,index);
 	float inf = egetinf(editor,index);
 
 	if(cur.yline != old.yline)
@@ -223,11 +223,11 @@ esetcur(EEditor *editor, int index, ECursor cur) {
 		char *ptr = egetptr2(editor,old.xchar,cur.yline);
 		if(cur.xchar > old.xchar)
 		{ for(int i=0;i<cur.xchar-old.xchar;i+=1)
-			inf += rlFont_getWidth(editor->font,ptr[i-0]);
+			inf += lui_getTextWidth(editor->font,ptr[i-0]);
 		} else
 		if(cur.xchar < old.xchar)
 		{ for(int i=0;i>cur.xchar-old.xchar;i-=1)
-			inf -= rlFont_getWidth(editor->font,ptr[i-1]);
+			inf -= lui_getTextWidth(editor->font,ptr[i-1]);
 		}
 	}
 	editor->curinf[index] = inf;
@@ -235,9 +235,9 @@ esetcur(EEditor *editor, int index, ECursor cur) {
 }
 
 void
-esetcurx(EEditor *editor, int index, int xchar)
+esetcurx(lui_Editor *editor, int index, int xchar)
 {
-	ECursor cur = egetcur(editor,index);
+	lui_Cursor cur = egetcur(editor,index);
 
 	cur.xchar = xchar;
 
@@ -245,9 +245,9 @@ esetcurx(EEditor *editor, int index, int xchar)
 }
 
 void
-esetcury(EEditor *editor, int index, int yline)
+esetcury(lui_Editor *editor, int index, int yline)
 {
-	ECursor cur = egetcur(editor,index);
+	lui_Cursor cur = egetcur(editor,index);
 
 	cur.yline = yline;
 
@@ -255,13 +255,13 @@ esetcury(EEditor *editor, int index, int yline)
 }
 
 char
-ecurchr(EEditor *wdg, int index, int off) {
+ecurchr(lui_Editor *wdg, int index, int off) {
 	return egetchr(wdg,ecurloc(wdg,index) + off);
 }
 
-ECursor
-emovcurx(EEditor *editor, int cursor, int mov) {
-	ECursor cur = egetcur(editor,cursor);
+lui_Cursor
+emovcurx(lui_Editor *editor, int cursor, int mov) {
+	lui_Cursor cur = egetcur(editor,cursor);
 
 	if(cur.xchar + mov > ebuffer_get_line_length(&editor->buffer,cur.yline)) {
 		if(cur.yline + 1 <= arrlen(editor->buffer.lcache) - 1) {
@@ -285,20 +285,20 @@ emovcurx(EEditor *editor, int cursor, int mov) {
 
 void
 emovcury(
-EEditor *editor, int index, int mov)
+lui_Editor *editor, int index, int mov)
 {
 	esetcury(editor,index,egetcury(editor,index)+mov);
 }
 
 void
-eaddchr_(EEditor *wdg, int cursor, int length) {
+eaddchr_(lui_Editor *wdg, int cursor, int length) {
 }
 
 
 void
-Editor_keyOne(EEditor *wdg, E_KEY key) {
+Editor_keyOne(lui_Editor *wdg, lui_EditorEvent key) {
 
-	ECursor cursor = egetcur(wdg,key.cur);
+	lui_Cursor cursor = egetcur(wdg,key.cur);
 	int off = ecurloc(wdg,key.cur);
 	int dir = 0;
 	int cur = key.cur;
@@ -367,7 +367,7 @@ Editor_keyOne(EEditor *wdg, E_KEY key) {
 			}
 
 			wdg->cursor_blink_timer = 0;
-			E_ASSERT(chr != '\r' && chr != '\n' );
+			lui__debugassert(chr != '\r' && chr != '\n' );
 
 			int mov = 1;
 			int end = 0;
@@ -443,7 +443,7 @@ Editor_keyOne(EEditor *wdg, E_KEY key) {
 
 
 void
-Editor_testKeys(EEditor *editor) {
+Editor_testKeys(lui_Editor *editor) {
 
 	int mod = 0;
 
@@ -465,17 +465,17 @@ Editor_testKeys(EEditor *editor) {
 
 		int yline = editor->lyview + ycursor / editor->font->line_height;
 
-		emarker_t line = Emu_buffer_get_line_at_index(&editor->buffer,yline);
+		lui_TextLine line = Emu_buffer_get_line_at_index(&editor->buffer,yline);
 		char *string = editor->buffer.string + line.offset;
 
 		float xwalk = 0;
 		for(int xchar=0; xchar<line.length; xchar+=1)
 		{
-			float width = rlFont_getWidth(editor->font,string[xchar]);
+			float width = lui_getTextWidth(editor->font,string[xchar]);
 
 			if(xcursor >= xwalk && xcursor <= xwalk + width)
 			{
-				esetcur(editor,0,(ECursor){xchar,yline});
+				esetcur(editor,0,(lui_Cursor){xchar,yline});
 				break;
 			}
 
@@ -511,7 +511,7 @@ Editor_testKeys(EEditor *editor) {
 	{
 		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		{
-			emarker_t row = Emu_buffer_get_line_at_index(&editor->buffer,egetcury(editor,i));
+			lui_TextLine row = Emu_buffer_get_line_at_index(&editor->buffer,egetcury(editor,i));
 
 			int num = 1;
 
@@ -528,7 +528,7 @@ if(rx_testKey(rxKEY_kUP))
 {
 	if(rx_testCtrlKey() && rx_testAltKey())
 	{
-		ECursor cur = egetcur(editor,0);
+		lui_Cursor cur = egetcur(editor,0);
 		cur.yline -= 1;
 		eaddcur(editor,cur);
 	} else
@@ -548,7 +548,7 @@ if(rx_testKey(rxKEY_kDOWN))
 {
 	if(rx_testCtrlKey() && rx_testAltKey())
 	{
-		ECursor cur = egetcur(editor,enumcur(editor)-1);
+		lui_Cursor cur = egetcur(editor,enumcur(editor)-1);
 		cur.yline += 1;
 		eaddcur(editor,cur);
 	} else

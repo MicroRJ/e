@@ -20,18 +20,18 @@
 */
 
 void
-EBuffer_setName(EBuffer *lpBuffer, char const *lpName) {
+EBuffer_setName(lui_Buffer *lpBuffer, char const *lpName) {
 	strcpy(lpBuffer->name,lpName);
 }
 
 void
-EBuffer_setFileName(EBuffer *lpBuffer, char const *lpName) {
+EBuffer_setFileName(lui_Buffer *lpBuffer, char const *lpName) {
 	strcpy(lpBuffer->fileName,lpName);
 }
 
 
 void
-EBuffer_initSized(EBuffer *lpBuffer, char const *tag, __int64 length) {
+EBuffer_initSized(lui_Buffer *lpBuffer, char const *tag, __int64 length) {
 	EBuffer_setName(lpBuffer,tag);
 
 	if(length) {
@@ -41,9 +41,9 @@ EBuffer_initSized(EBuffer *lpBuffer, char const *tag, __int64 length) {
 }
 
 void
-EBuffer_uninit(EBuffer *lpBuffer) {
-	E_FREE_ALIGNED(lpBuffer->string);
-	E_FREE_ALIGNED(lpBuffer->colors);
+EBuffer_uninit(lui_Buffer *lpBuffer) {
+	lui__freealigned(lpBuffer->string);
+	lui__freealigned(lpBuffer->colors);
 	lpBuffer->length = 0;
 	lpBuffer->extent = 0;
 	lpBuffer->string = 0;
@@ -51,16 +51,16 @@ EBuffer_uninit(EBuffer *lpBuffer) {
 }
 
 char *
-EBuffer_allocSize(EBuffer *lpBuffer, __int64 reserve, __int64 commit) {
-	E_ASSERT(commit <= reserve + lpBuffer->extent - lpBuffer->length);
+EBuffer_allocSize(lui_Buffer *lpBuffer, __int64 reserve, __int64 commit) {
+	lui__debugassert(commit <= reserve + lpBuffer->extent - lpBuffer->length);
 
 	if(lpBuffer->extent < lpBuffer->length+reserve) {
 		lpBuffer->extent <<= 1;
 		if(lpBuffer->extent < lpBuffer->length + reserve) {
 			lpBuffer->extent = lpBuffer->length + reserve;
 		}
-		lpBuffer->string = E_REALLOC_ALIGNED(sizeof(*lpBuffer->string) * lpBuffer->extent, lpBuffer->string);
-		lpBuffer->colors = E_REALLOC_ALIGNED(sizeof(*lpBuffer->colors) * lpBuffer->extent, lpBuffer->colors);
+		lpBuffer->string = lui__reallocaligned(sizeof(*lpBuffer->string) * lpBuffer->extent, lpBuffer->string);
+		lpBuffer->colors = lui__reallocaligned(sizeof(*lpBuffer->colors) * lpBuffer->extent, lpBuffer->colors);
 	}
 
 	lpBuffer->length = lpBuffer->length + commit;
@@ -68,7 +68,7 @@ EBuffer_allocSize(EBuffer *lpBuffer, __int64 reserve, __int64 commit) {
 }
 
 char *
-EBuffer_insertSize(EBuffer *buffer, __int64 offset, __int64 length) {
+EBuffer_insertSize(lui_Buffer *buffer, __int64 offset, __int64 length) {
 
 	char *colors = (char *) buffer->colors + offset;
 	char *string = (char *) buffer->string + offset;
@@ -86,11 +86,11 @@ EBuffer_insertSize(EBuffer *buffer, __int64 offset, __int64 length) {
 
 		/* [[todo]]: this could be niftier */
 		if (length < 0) {
-			E_MEMMOVE(string,string-length,tomove);
-			E_MEMMOVE(colors,colors-length,tomove);
+			lui_memmove(string,string-length,tomove);
+			lui_memmove(colors,colors-length,tomove);
 		} else {
-			E_MEMMOVE(string+length,string,tomove);
-			E_MEMMOVE(colors+length,colors,tomove);
+			lui_memmove(string+length,string,tomove);
+			lui_memmove(colors+length,colors,tomove);
 		}
 	}
 
@@ -104,7 +104,7 @@ EBuffer_insertSize(EBuffer *buffer, __int64 offset, __int64 length) {
 
 /* could this be done automatically #todo */
 void
-EBuffer_reformat(EBuffer *buffer) {
+EBuffer_reformat(lui_Buffer *buffer) {
 
 	char *cursor = buffer->string;
   /* todo */
@@ -113,7 +113,7 @@ EBuffer_reformat(EBuffer *buffer) {
 
 	int indent = 0;
 	for(;;) {
-		emarker_t *line = arradd(buffer->lcache,1);
+		lui_TextLine *line = arradd(buffer->lcache,1);
 		line->offset = (cursor - buffer->string);
 
 		while((cursor < buffer->string + buffer->length) &&
@@ -135,14 +135,14 @@ EBuffer_reformat(EBuffer *buffer) {
 rx_assert(cursor == buffer->string + buffer->length);
 }
 
-inline emarker_t
+inline lui_TextLine
 Emu_buffer_get_line_at_index(
-EBuffer *buffer, int index)
+lui_Buffer *buffer, int index)
 {
   /* remove, this should not happen? */
 	if(buffer->lcache == rxNull)
 	{
-		emarker_t row;
+		lui_TextLine row;
 		row.length = 0;
 		row.offset = 0;
 		return row;
@@ -153,14 +153,14 @@ EBuffer *buffer, int index)
 
 inline int
 ebuffer_get_line_offset(
-EBuffer *buffer, int yline)
+lui_Buffer *buffer, int yline)
 {
 	return Emu_buffer_get_line_at_index(buffer,yline).offset;
 }
 
 inline int
 ebuffer_get_line_length(
-EBuffer *buffer, int yline)
+lui_Buffer *buffer, int yline)
 {
 	return Emu_buffer_get_line_at_index(buffer,yline).length;
 }

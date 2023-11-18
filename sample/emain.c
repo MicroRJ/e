@@ -17,8 +17,8 @@
 #include <rx/rx.c>
 
 
-int eeditor_unload(EEditor *editor, char const *name);
-void eeditor_load(EEditor *editor, char const *name);
+int eeditor_unload(lui_Editor *editor, char const *name);
+void eeditor_load(lui_Editor *editor, char const *name);
 
 #include <e.h>
 
@@ -53,14 +53,14 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	rxinit(L"e");
+	init_windowed(L"e");
 
-	rlFont_Face *font = rx_loadFontFromFile( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
+	lui_Font *font = lui_loadFont( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
-	EEditor editor;
+	lui_Editor editor;
 	ZeroMemory(&editor,sizeof(editor));
 
-	eaddcur(&editor,(ECursor){0,0});
+	eaddcur(&editor,(lui_Cursor){0,0});
 	editor.font = font;
 
 	eeditor_load(&editor,"todo.txt");
@@ -102,10 +102,10 @@ int main(int argc, char **argv)
 		} else
 		{
 		}
-		boxthing rect = makeboxthing(0,0,rx.wnd.size_x,rx.wnd.size_y);
-		boxthing r = rlGetWindowClientBox();
-		rlDrawRect(r,rxColor_RGBA_U(8,36,36,255));
-		Editor_render(&editor,r);
+		lui_Box rect = lui_dobox(0,0,rx.wnd.size_x,rx.wnd.size_y);
+		lui_Box r = rlGetWindowClientBox();
+		lui_draw_rect(r,rxColor_RGBA_U(8,36,36,255));
+		lui__draw_editor(&editor,r);
 #endif
 
     /* todo: this is something that rx should do intrinsically */
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 
 void
 eeditor_load(
-EEditor *editor, char const *name)
+lui_Editor *editor, char const *name)
 {
 	if(name != 0 && strlen(name) != 0)
 	{
@@ -141,7 +141,7 @@ EEditor *editor, char const *name)
 }
 
 int
-eeditor_unload(EEditor *editor, char const *name)
+eeditor_unload(lui_Editor *editor, char const *name)
 {
 	int result = rxFalse;
 

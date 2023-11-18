@@ -19,15 +19,33 @@
 **
 */
 
+
+// this whole thing is garbage, we need a static allocator, we should then
+// create a font atlas and that's it ...
+
+/* #todo */
+rxAPI inline void
+rlMem_copy2d( Emu_memcpy2d_config_t *config )
+{
+	for (int y = 0; y < config->src.height; y += 1)
+	{
+		memcpy(
+		config->dst.cursor + config->dst.stride * (y + config->dst.offset_y) + config->dst.offset_x,
+		config->src.cursor + config->src.stride * (y + config->src.offset_y) + config->src.offset_x,
+
+		config->src.stride );
+	}
+}
+
 /* trying this out, see if I like it #pending */
 #define each_in(decl_type,decl_name,arr)\
 (decl_type decl_name = arr; decl_name < arrend(arr); decl_name += 1)
 
-rxFont_Glyph *
-rlFont_makeGlyph(rlFont_Pallet *pallet, int index, int utf32
+lui_FontGlyph *
+rlFont_makeGlyph(lui_GlyphCol *pallet, int index, int utf32
 ,	short x0, short y0, short x1, short y1, short offset_x, short offset_y, float walking_x)
 {
-	rxFont_Glyph glyph;
+	lui_FontGlyph glyph;
 	glyph.pallet = pallet;
 	glyph.external_index = index;
 	glyph.utf32 = utf32;
@@ -39,20 +57,20 @@ rlFont_makeGlyph(rlFont_Pallet *pallet, int index, int utf32
 	glyph.offset_y = offset_y;
 	glyph.walking_x = walking_x;
 
-	rxFont_Glyph *result = EMU_ALLOC_TYPE(rxFont_Glyph);
+	lui_FontGlyph *result = EMU_ALLOC_TYPE(lui_FontGlyph);
 	*result = glyph;
 	return result;
 }
 
-rlFont_Bucket *
+lui_GlyphRow *
 rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 {
-	rlFont_Bucket *result = NULL;
+	lui_GlyphRow *result = NULL;
 
 	/* try to find a better pallet based on the glyph's face #todo */
-	for each_in(rlFont_Pallet **, pallet_, emu_Font_Library.pallets) {
+	for each_in(lui_GlyphCol **, pallet_, lui.pallets) {
 
-		rlFont_Pallet *pallet = *pallet_;
+		lui_GlyphCol *pallet = *pallet_;
 
 		rx_Image storage = pallet->storage;
 
@@ -65,9 +83,9 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 		}
 
 		/* search each bucket in the pallet */
-		for each_in(rlFont_Bucket **, bucket_, pallet->buckets) {
+		for each_in(lui_GlyphRow **, bucket_, pallet->buckets) {
 
-			rlFont_Bucket *bucket = *bucket_;
+			lui_GlyphRow *bucket = *bucket_;
 
 			if (bucket == NULL) {
 				continue;
@@ -109,7 +127,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 		}
 
 		/* maybe sort the array #todo #pending */
-		result = EMU_ALLOC_TYPE(rlFont_Bucket);
+		result = EMU_ALLOC_TYPE(lui_GlyphRow);
 
 		if(result != NULL) {
 
@@ -130,16 +148,16 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 	if(result == NULL)
 	{
-		rlFont_Pallet *pallet = EMU_ALLOC_TYPE(rlFont_Pallet);
+		lui_GlyphCol *pallet = EMU_ALLOC_TYPE(lui_GlyphCol);
 		pallet->buckets = NULL;
 		pallet->texture = NULL;
 		pallet->storage = rx_makeImage(1024,1024,EMU_FORMAT_R8_UNORM);
 		pallet->cursor_y = 0;
 
-		*arradd(emu_Font_Library.pallets,1) = pallet;
+		*arradd(lui.pallets,1) = pallet;
 
 		/* maybe sort the array #todo #pending */
-		result = EMU_ALLOC_TYPE(rlFont_Bucket);
+		result = EMU_ALLOC_TYPE(lui_GlyphRow);
 		result->pallet = pallet;
 		result->height = height;
 		result->cursor_x = 0;
@@ -168,8 +186,8 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 	return result;
 }
 
-rxFont_Glyph *
-rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
+lui_FontGlyph *
+rlFont_makeGlyphFromIndex(lui_Font *lpFont, int glyph_index, int utf32) {
 
 	FT_GlyphSlot glyph = NULL;
 	int glyph_width  = 0;
@@ -177,8 +195,8 @@ rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 	int glyph_stride = 0;
 	int dest_x = 0;
 	int dest_y = 0;
-	rlFont_Bucket *lpBucket = NULL;
-	rlFont_Pallet *lpPallet = NULL;
+	lui_GlyphRow *lpBucket = NULL;
+	lui_GlyphCol *lpPallet = NULL;
 	FT_Face lpFace = lpFont->freetype.face;
 
 	if (glyph_index == 0) {
@@ -228,7 +246,7 @@ rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 
 	L_backdoor:
 
-	rxFont_Glyph *lpGlyph;
+	lui_FontGlyph *lpGlyph;
 	if (glyph == NULL) {
 		lpGlyph = rlFont_makeGlyph(lpPallet,glyph_index,utf32,0,0,0,0,0,0,0);
 	} else {
@@ -243,18 +261,18 @@ rlFont_makeGlyphFromIndex(rlFont_Face *lpFont, int glyph_index, int utf32) {
 	return lpGlyph;
 }
 
-rxFont_Glyph *
-rlFont_makeGlyphFromName (rlFont_Face *lpFont, char const *lpName, int utf32) {
+lui_FontGlyph *
+rlFont_makeGlyphFromName (lui_Font *lpFont, char const *lpName, int utf32) {
 
 	return rlFont_makeGlyphFromIndex(lpFont,FT_Get_Name_Index(lpFont->freetype.face,lpName),utf32);
 }
 
-rxFont_Glyph *
-rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32) {
+lui_FontGlyph *
+lui__findOrMakeGlyphByUnicode(lui_Font *lpFont, int utf32) {
 
 	/* [[SPEED]] */
-	for each_in(rxFont_Glyph **, it_, lpFont->glyph_table) {
-		rxFont_Glyph *it = *it_;
+	for each_in(lui_FontGlyph **, it_, lpFont->glyph_table) {
+		lui_FontGlyph *it = *it_;
 		if (it != NULL) {
 			if (it->utf32 == utf32) {
 				return it;
@@ -271,7 +289,7 @@ rlFont_findOrMakeGlyphByUnicode(rlFont_Face *lpFont, int utf32) {
 }
 
 float
-rlFont_getKerning(rlFont_Face *lpFont, int prev, int code) {
+rlFont_getKerning(lui_Font *lpFont, int prev, int code) {
 	float result = .0;
 	if (FT_HAS_KERNING(lpFont->freetype.face)) {
 		/* [[TODO]]: you already have the indexes stored */
@@ -301,7 +319,7 @@ rlFont_readNextLigature(char const *s, int *u) {
 	draw quad, when we run out of space we flush the buffer */
 void
 rx_drawText( rxTTF_DRAW *lpConfig ) {
-	rlFont_Face *lpFont = lpConfig->lpFont;
+	lui_Font *lpFont = lpConfig->lpFont;
 
 	if (lpConfig->char_height == 0.) {
 		lpConfig->char_height = lpFont->char_height;
@@ -325,7 +343,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 	rlColor *color_table = lpConfig->color_table;
 
 
-	rlFont_Line single_line;
+	lui_TextLine single_line;
 	single_line.offset = 0;
 	single_line.length = lpConfig->length;
 	if(lpConfig->line_array == NULL) {
@@ -342,12 +360,12 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 	}
 	rxIMP_applyMode(mode,FALSE);
 
-	rlFont_Line *line_array = lpConfig->line_array;
+	lui_TextLine *line_array = lpConfig->line_array;
 	int line_count = lpConfig->line_count;
 
 	float y = lpConfig->y;
 
-	rlFont_Line *it;
+	lui_TextLine *it;
 	for (it = line_array; it < line_array + line_count; it += 1) {
 		__int64 offset = it->offset;
 		__int64 length = it->length;
@@ -370,7 +388,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 
 			int utf32;
 			iii += rlFont_readNextLigature(string+(offset+iii),&utf32);
-			rxFont_Glyph *glyph = rlFont_findOrMakeGlyphByUnicode(lpFont,utf32);
+			lui_FontGlyph *glyph = lui__findOrMakeGlyphByUnicode(lpFont,utf32);
 			if (glyph == NULL) {
 				goto L_skip_rendering;
 			}
@@ -381,7 +399,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 				goto L_skip_rendering;
 			}
 
-			rlFont_Pallet *pallet = glyph->pallet;
+			lui_GlyphCol *pallet = glyph->pallet;
 			if (pallet == NULL) {
 				continue;
 			}
@@ -393,7 +411,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 				if(pallet->texture == NULL) {
 					pallet->texture = rx_uploadimage(pallet->storage);
 				} else {
-					rxGPU_updateTexture(pallet->texture,pallet->storage);
+					rxGPU_update_texture(pallet->texture,pallet->storage);
 				}
 			}
 
@@ -430,7 +448,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 			L_skip_rendering:
 
 			if (glyph == NULL || glyph->walking_x == 0.) {
-				glyph = rlFont_findOrMakeGlyphByUnicode(lpFont,'_');
+				glyph = lui__findOrMakeGlyphByUnicode(lpFont,'_');
 			}
 			float walking_x = glyph->walking_x;
 
@@ -490,8 +508,8 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
   descentInPixels = descentEm * emToPixels,
   lineGapInPixels = lineGapEm * emToPixels;
   glyphArray = NULL;
-  glyphAtlas = rxGPU_makeTexture(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
-  atlasMemory = rxGPU_borrowTexture(glyphAtlas);
+  glyphAtlas = rxGPU_create_texture(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
+  atlasMemory = rxGPU_borrow_texture(glyphAtlas);
 
   /* widen the glyphs to prepare for sub-pixel rendering, subsequent renderers
 	 must take this into account #noteworthy we could also get rid of it by simply
@@ -511,7 +529,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 		  rune  < glyphEnd;    rune += 1 )
   {
 	 /* we have to add the glyph even if the character is invisible #todo */
-	 rxFont_Glyph *data = arradd(glyphArray,1);
+	 lui_FontGlyph *data = arradd(glyphArray,1);
 
 	 int advanceWidthEm = 0;
 	 int leftSideBearingEm = 0;

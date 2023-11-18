@@ -13,74 +13,70 @@
 #ifndef _E_H
 #define _E_H
 
+/* note: '/LIBPATH:<where>' tell the compiler where to find freetype */
+#pragma comment(lib,"freetype")
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+#define TUI_LINE_HEIGHT ((lui.font->line_height*1.2f))
+
+#define ELUI_COLOR_BACKGROUND   rxColor_RGBA_U(11,53,62,255)
+#define ELUI_COLOR_FOREGROUND   rxColor_RGBA_U(9,63,73,255)
+#define ELUI_COLOR_PRIMARY      rxColor_RGBA_U(111,139,149,255)
+#define ELUI_COLOR_SECONDARY 	  rxColor_RGBA_U(111,139,149,255)
+#define ELUI_COLOR_DANGER 		  rxColor_RGBA_U(180+45,60+45,63+45,255)
+#define ELUI_COLOR_HAPPY 		  rxColor_RGBA_U(79,191,138,255)
+#define ELUI_COLOR_ACCENT 		  rxColor_RGBA_U(134,151,38,255)
+
+#define ELUI_DEFAULT_ROUNDINESS 2.5
+
+
 #ifndef _MSC_VER
 typedef signed long long int __int64;
 typedef signed int 			  __int32;
 #endif
 
-#ifndef E_REALLOC_ALIGNED
-#define E_REALLOC_ALIGNED(length,memory) _aligned_realloc(memory,length,16)
-# endif
-
-#ifndef E_FREE_ALIGNED
-#define E_FREE_ALIGNED(memory) _aligned_free(memory);
-# endif
-
-#ifndef E_MEMMOVE
-#define E_MEMMOVE memmove
-# endif
-
-#ifndef E_MEMCOPY
-#define E_MEMCOPY memcopy
-# endif
-
 /* TODO: */
-#ifndef E_ASSERT
-#define E_ASSERT rx_assert
+#ifndef lui__debugassert
+#define lui__debugassert rx_assert
+# endif
+#ifndef lui__reallocaligned
+#define lui__reallocaligned(length,memory) _aligned_realloc(memory,length,16)
+# endif
+#ifndef lui__freealigned
+#define lui__freealigned(memory) _aligned_free(memory);
+# endif
+#ifndef lui_memmove
+#define lui_memmove memmove
+# endif
+#ifndef lui_memcopy
+#define lui_memcopy memcopy
 # endif
 
+// TODO: REMOVE BEGIN
 #ifndef E_IS_ALPNUM
 #define E_IS_ALPNUM(r) (isWithin(r,'a','z')||isWithin(r,'A','Z')||isWithin(r,'0','9')||(r)== '_')
 # endif
-
 #ifndef E_IS_BLANK
 #define E_IS_BLANK(chr) ((chr ==  ' ')||(chr == '\t')||(chr == '\r')||(chr == '\n'))
 # endif
-
 #ifndef E_IS_WORD_DELI
 #define E_IS_WORD_DELI(r) (!E_IS_ALPNUM(r))
 # endif
-
-/* [[FONT]] */
-#ifndef E_FONT
-#define E_FONT_GET_LINE_HEIGHT(E)
-#define E_FONT_GET_CODE_DIMENS(E,UTF32,LPWIDTH,LPHEIGHT)
-#define E_FONT_GET_CODE_ADVANCE(E,UTF32A,UTF32B)
-#define E_FONT_GET_NAME(E)
-# endif
-
-/* [[THEME]] */
 # ifndef E_CURSOR_PHASE
 # define E_CURSOR_PHASE(E,time_since_last_blink,blinks_per_second) (.5 + .5 * cos(rxPI_F * time_since_last_blink / blinks_per_second));
 #include <math.h>
 #  endif
-
 #ifndef E_CURSOR_COLOR
 #define E_CURSOR_COLOR(E) E_MK_COLOR_RGBA_UNORM(148,232,148,255)
 # endif
-
-/* [[DRAWING INTERFACE]] */
-
 #ifndef E_COLOR
 #define E_COLOR rlColor
 # endif
 #ifndef E_MK_COLOR_RGBA_UNORM
 #define E_MK_COLOR_RGBA_UNORM rxColor_RGBA_U
 # endif
-
-#ifndef E_DRAW
-#define E_DRAW_AABB(color,roundness,x,y,w,h)
-# endif
+// TODO: REMOVE END
 
 #pragma warning(push)
 #pragma warning(disable:4100)
@@ -144,14 +140,135 @@ typedef struct {
 	int num,chr;
 	float xpt,ypt;
 	void *lpUser;
-} E_KEY;
+} lui_EditorEvent;
 
-/* [[TODO]]: REMOVE */
-#include  <src/earray.c>
-#include   <src/efont.h>
-#include   <src/efont.c>
+typedef struct lui_GlyphCol lui_GlyphCol;
 
-typedef rlFont_Line emarker_t;
+typedef struct {
+	lui_GlyphCol *pallet;
+	int external_index;
+	int utf32;
+	short x0,y0,x1,y1;
+	short offset_x,offset_y;
+	float walking_x;
+} lui_FontGlyph;
+
+// TODO:
+// this is the shittiest packing algorithm ever
+typedef struct lui_GlyphRow {
+	lui_GlyphCol *pallet;
+	short height,cursor_x,cursor_y;
+} lui_GlyphRow;
+
+typedef struct lui_GlyphCol {
+	rxGPU_Texture *texture;
+	rx_Image storage;
+	unsigned dirty: 1;
+	lui_GlyphRow **buckets;
+	short cursor_y;
+} lui_GlyphCol;
+
+typedef struct lui_Font {
+	char const *fpath;
+
+	lui_FontGlyph **glyph_table;
+
+	float char_height;
+	float line_height;
+
+	float spaceWidth;
+
+	float ascent;
+	float descent;
+	float lineGap;
+
+	int is_sdf;
+	int is_subpixel;
+
+	/* for underline effect, offset is relative to the baseline,
+		height is whatever the designer thought looked nice for the
+		underline's thickness */
+	float underline_baseline_offset;
+	float underline_thickness;
+
+	struct {
+		FT_Face face;
+	} freetype;
+
+	// struct {
+	// 	stbtt_fontinfo face;
+	// } stb;
+} lui_Font;
+
+typedef struct {
+	/* [[TODO]]: only the offset is needed */
+	int offset,length;
+} lui_TextLine;
+
+// [[[TODO REMOVE]]]
+/* is either the font knows about the renderer or the renderer knows about the font
+	or this becomes a separate file #pending */
+typedef struct rxTTF_DRAW {
+	union {
+		lui_Font *font;
+		lui_Font *lpFont;
+	};
+	float             x,y;
+
+	int tab_size; /* in spaces */
+
+	rlColor color;
+
+	rlColor *color_table;
+
+	int              length;
+	char const     * string;
+	unsigned char  * colors;
+
+	/* should you choose to use .array to draw several lines,
+		.string, .colors and .length must be large enough to accomodate all
+		lines, set colors or null to use .color instead */
+	lui_TextLine *line_array;
+
+	int line_count;
+
+	float line_height;
+
+	/* optional, not meant for subpixel fonts */
+	float char_height;
+} rxTTF_DRAW;
+
+
+
+/* [[ REMOVE ]] */
+typedef struct
+{
+	struct
+	{
+		int offset_x, offset_y;
+		int stride, height;
+		unsigned char *cursor;
+	} dst;
+
+	struct
+	{
+		int offset_x, offset_y;
+		int stride, height;
+		unsigned char const *cursor;
+	} src;
+
+} Emu_memcpy2d_config_t;
+
+enum { lui_left, lui_right, lui_top, lui_bottom };
+
+typedef struct lui_Box {
+	float x0,y0,x1,y1;
+} lui_Box;
+
+typedef struct {
+	void *key;
+	elBool toggled;
+} lui_State;
 
 typedef struct {
 	char name[MAX_PATH];
@@ -159,7 +276,7 @@ typedef struct {
    /* [[todo]]: this could be replaced with single ints, the length of the line
    	isn't necessary, at least not explicitly, it can be calculated by using the
    	offset of the next line instead  */
-	emarker_t      *lcache;
+	lui_TextLine      *lcache;
 	union  {
 		void        *memory;
 		char        *string;
@@ -172,82 +289,215 @@ typedef struct {
 	__int64 extent;
 	__int64 length;
 	__int32 isReadonly;
-} EBuffer;
-
-void EBuffer_setName(EBuffer *, char const *);
-void EBuffer_setFileName(EBuffer *, char const *);
-/* [[todo]]: alloc and insert could be replaced with a single really nifty function */
-char *EBuffer_allocSize(EBuffer *, __int64 reserve, __int64 commit);
-char *EBuffer_insertSize(EBuffer *, __int64 offset, __int64 length);
+} lui_Buffer;
 
 typedef struct {
 	__int32 xchar,yline;
-} ECursor;
+} lui_Cursor;
 
 typedef struct {
 	E_MOD mod;
-	ECursor *cursor;
-	EBuffer buffer;
-	rlFont_Face *font;
+	lui_Cursor *cursor;
+	lui_Buffer buffer;
+	lui_Font *font;
 	float cursor_blink_speed_in_seconds;
 	float cursor_blink_timer;
 	__int32 lyview;
 	__int32 isReadonly;
-} EEditor;
+} lui_Editor;
+
+struct {
+	lui_Font *font;
+	float textHeight;
+	rlColor textColor;
+	rlColor *colorTable;
+	unsigned char *charColors;
+	lui_Box boxstack[0x20];
+	lui_Box *box;
+	int boxcount;
+	lui_Font **fonts;
+	lui_GlyphCol **pallets;
+} elGlobal lui;
+
+void EBuffer_setName(lui_Buffer *, char const *);
+void EBuffer_setFileName(lui_Buffer *, char const *);
+/* [[todo]]: alloc and insert could be replaced with a single really nifty function */
+char *EBuffer_allocSize(lui_Buffer *, __int64 reserve, __int64 commit);
+char *EBuffer_insertSize(lui_Buffer *, __int64 offset, __int64 length);
+void EBuffer_initSized(lui_Buffer *, char const *, __int64 length);
+lui_TextLine Emu_buffer_get_line_at_index(lui_Buffer *buffer, int index);
+int ebuffer_get_line_length(lui_Buffer *buffer, int yline);
+int ebuffer_get_line_offset(lui_Buffer *buffer, int yline);
 
 /* [[API]] */
-char *egetptr(EEditor *, __int32);
-__int32 enumcur(EEditor *);
-__int32 eaddcur(EEditor *, ECursor cur);
-void esetcur(EEditor *, __int32, ECursor cur);
-ECursor egetcur(EEditor *, __int32);
-__int32 egetcurx(EEditor *, __int32);
-__int32 egetcury(EEditor *, __int32);
-__int32 ecurloc(EEditor *, __int32);
-char ecurchr(EEditor *, __int32, __int32 off);
-char *ecurptr(EEditor *, __int32);
+char *egetptr(lui_Editor *, __int32);
+__int32 enumcur(lui_Editor *);
+__int32 eaddcur(lui_Editor *, lui_Cursor cur);
+void esetcur(lui_Editor *, __int32, lui_Cursor cur);
+lui_Cursor egetcur(lui_Editor *, __int32);
+__int32 egetcurx(lui_Editor *, __int32);
+__int32 egetcury(lui_Editor *, __int32);
+__int32 ecurloc(lui_Editor *, __int32);
+char ecurchr(lui_Editor *, __int32, __int32 off);
+char *ecurptr(lui_Editor *, __int32);
 
-__int32 eputchar(EEditor *, __int32 index, __int32 chr);
-void edelchar(EEditor *, __int32 index);
-void eaddline(EEditor *, __int32 offset, __int32 number);
-void eremline(EEditor *, __int32 offset, __int32 number);
+__int32 eputchar(lui_Editor *, __int32 index, __int32 chr);
+void edelchar(lui_Editor *, __int32 index);
+void eaddline(lui_Editor *, __int32 offset, __int32 number);
+void eremline(lui_Editor *, __int32 offset, __int32 number);
 
-void Editor_testKeys(EEditor *);
-void Editor_keyOne(EEditor *, E_KEY key);
-void Editor_keyAll(EEditor *, E_KEY key);
+void Editor_testKeys(lui_Editor *);
+void Editor_keyOne(lui_Editor *, lui_EditorEvent key);
+void Editor_keyAll(lui_Editor *, lui_EditorEvent key);
 
-#include <src/boxthing.c>
-#include <src/ebuffer.h>
+
+/* [[TODO]] */
+#define lui_logError(fmt,...)
+
+
+lui_Font *lui_loadFont(char const *fileName, float height);
+lui_FontGlyph *lui__findOrMakeGlyphByUnicode(lui_Font *lpFont, int utf32);
+
+void
+rx_drawText( rxTTF_DRAW *config );
+
+
+
+lui_Font *lui_loadFont(char const *fileName, float height) {
+	FT_Library library_ft;
+	if (FT_Init_FreeType(&library_ft)) {
+		lui_logError("failed to init FreeType");
+	}
+	FT_Face face_ft;
+	if (FT_New_Face(library_ft,fileName,0,&face_ft)) {
+		lui_logError("failed to load file path");
+	}
+	if (FT_Set_Pixel_Sizes(face_ft,0,height)) {
+		lui_logError("invalid pixel size");
+	}
+
+	/* 16.16 to 24.6 to ..32.. */
+	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
+	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
+
+	lui_Font *font = EMU_ALLOC_TYPE(lui_Font);
+
+	font->is_subpixel = TRUE;
+	font->is_sdf = FALSE;
+	font->fpath = fileName;
+	font->glyph_table = NULL;
+	font->ascent = face_ft->ascender * units_to_pixels;
+	font->descent = face_ft->descender * units_to_pixels;
+	font->lineGap = lineGap * units_to_pixels;
+	font->line_height = height;
+	font->char_height = height;
+	font->freetype.face = face_ft;
+
+	lui_FontGlyph *underscoreGlyph = lui__findOrMakeGlyphByUnicode(font,'_');
+	lui_FontGlyph *spaceGlyph = lui__findOrMakeGlyphByUnicode(font,' ');
+	if (spaceGlyph == NULL) {
+		spaceGlyph = underscoreGlyph;
+	}
+	font->spaceWidth = spaceGlyph->walking_x;
+	return font;
+}
+
+
+float
+lui_getTextWidth(lui_Font *font, char const *lpStr, int length) {
+	float result = 0.;
+	float spaceW = font->spaceWidth;
+	for (int i=0; i<length; i+=1) {
+		int chr = lpStr[i];
+		if E_IS_BLANK(chr) {
+			if (chr == '\t') {
+				result += spaceW * 3;
+			} else {
+				result += spaceW;
+			}
+		} else {
+			lui_FontGlyph *lpGlyph = lui__findOrMakeGlyphByUnicode(font,chr);
+			result += lpGlyph->walking_x;
+		}
+	}
+	return result;
+}
+
+#include   <src/efont.c>
+#include "lui.c"
 #include <src/ebuffer.c>
-#include <src/eeditor.h>
+
+
+void
+Editor_keyAll(lui_Editor *lp, lui_EditorEvent key) {
+	for (key.cur=enumcur(lp)-1; key.cur>=0; key.cur-=1) {
+		Editor_keyOne(lp,key);
+	}
+}
+
+void
+Editor_handleKey(lui_Editor *lp, E_KID kid, int num, int chr) {
+
+	// printf("handle_key kid := %s num := %i chr := %i\n"
+	// , E_KID_toStringMap[kid],num,chr);
+
+	lui_EditorEvent key;
+	key.mod = lp->mod;
+	key.kid = kid;
+	key.num = num;
+	key.chr = chr;
+	key.cur =  -1;
+	Editor_keyAll(lp,key);
+}
+
+int
+enumcur(lui_Editor *editor) {
+	return arrlen(editor->cursor);
+}
+
 #include <src/eeditor.c>
 
-void draw_single_text_line(rlFont_Face *font, float x, float y, char const *string) {
 
-	/* todo */
+void
+lui_draw_rect(lui_Box rect, rlColor color) {
+	Emu_imp_rect(color,rect.x0,rect.y0,(rect.x1-rect.x0),(rect.y1-rect.y0));
+}
+
+void
+lui_draw_round_box(lui_Box box, rlColor color, float cornerRadius) {
+	Emu_imp_rect_sdf(
+	/* */rxvec2_xy(
+	/* */box.x0 + (box.x1 - box.x0) * .5f,
+	/* */box.y0 + (box.y1 - box.y0) * .5f),
+	/* */rxvec2_xy(
+	/* */.5f*(box.x1-box.x0),
+	/* */.5f*(box.y1-box.y0)), color, cornerRadius, 1.);
+}
+
+void
+lui_draw_text_line(lui_Box box, char const *string) {
+
 	int length = 0;
-	while (*string != '\0' && *string != '\r' && *string != '\n') {
+	while isNeitherOf3(string[length],'\0','\r','\n') {
 		length += 1;
-		string += 1;
 	}
 
 	rxTTF_DRAW config;
 	ZeroMemory(&config,sizeof(config));
-	config.font = font;
-	config.x = x;
-	config.y = y;
-	config.char_height = font->char_height;
-	config.line_height = font->line_height;
-   config.tab_size = 2; /* in spaces */
-	config.color = rxColor_RGBA_U(8,36,36,255);
-	config.color_table = NULL;
+	config.font = lui.font;
+	config.x = box.x0;
+	config.y = box.y1 - lui.font->line_height * 1.2f;
+	config.char_height = lui.font->char_height;
+	config.line_height = lui.font->line_height;
+	config.tab_size = 2; /* in spaces */
+	config.color = lui.textColor;
+	config.color_table = lui.colorTable;
 	config.length = length;
 	config.string = string;
-	config.colors = NULL;
+	config.colors = lui.charColors;
 
 	rx_drawText( &config );
 }
-
 
 #pragma warning(pop)
 
