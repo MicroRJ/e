@@ -10,8 +10,8 @@
 
 // sample program using -+- rx -+-
 
-#define _RX_DEFAULT_WINDOW_SIZE_X 1080 + 256
-#define _RX_DEFAULT_WINDOW_SIZE_Y 720
+#define lgi_DEFAULT_WINDOW_WIDTH 1080 + 256
+#define lgi_DEFAULT_WINDOW_HEIGHT 720
 #define _RX_REFRESH_RATE          30
 #define _RX_STANDALONE
 #include <rx/rx.c>
@@ -53,19 +53,19 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
-	init_windowed(L"e");
+	lgi_initWindowed(L"e");
 
 	lui_Font *font = lui_loadFont( "assets\\Hack\\Hack_v3_003\\Hack-Regular.ttf", 22);
 
 	lui_Editor editor;
 	ZeroMemory(&editor,sizeof(editor));
 
-	eaddcur(&editor,(lui_Cursor){0,0});
+	lui_editor__addCursor(&editor,(lui_Cursor){0,0});
 	editor.font = font;
 
 	eeditor_load(&editor,"todo.txt");
 
-  // rxGPU_Texture *glyphTexture = editor.font.glyphAtlas;
+  // lgi_Texture *glyphTexture = editor.font.glyphAtlas;
 
 	int debug_overlay = 0;
 	int searching = 0;
@@ -74,44 +74,44 @@ int main(int argc, char **argv)
 	{
 
 #if 1
-		if(rx_testKey(rxKEY_kF5))
+		if(lgi_testKey(rxKEY_kF5))
 		{
 			RunCommandString("build.msvc.template.bat e TRUE");
 		} else
-		if(rx_testKey(rxKEY_kF1))
+		if(lgi_testKey(rxKEY_kF1))
 		{
 			eeditor_unload(&editor,editor.buffer.tag);
 		} else
-		if(rx_testKey(rxKEY_kF7))
+		if(lgi_testKey(rxKEY_kF7))
 		{ debug_overlay = !debug_overlay;
 		} else
-		if(rx_testKey(rxKEY_kF9))
+		if(lgi_testKey(rxKEY_kF9))
 		{
 		} else
-		if(rx_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && rx_testKey(rxKEY_kUP))
+		if(lgi_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && lgi_testKey(rxKEY_kUP))
 		{
 		} else
-		if(rx_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && rx_testKey(rxKEY_kDOWN))
+		if(lgi_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && lgi_testKey(rxKEY_kDOWN))
 		{
 		} else
-		if(rx_testCtrlKey() && rx_testKey('O')) {
+		if(lgi_testCtrlKey() && lgi_testKey('O')) {
 			eeditor_load(&editor,fdlg());
 		} else
-		if(rx_testCtrlKey() && rx_testKey('S')) {
+		if(lgi_testCtrlKey() && lgi_testKey('S')) {
 			eeditor_unload(&editor,fdlg());
 		} else
 		{
 		}
 		lui_Box rect = lui_dobox(0,0,rx.wnd.size_x,rx.wnd.size_y);
 		lui_Box r = rlGetWindowClientBox();
-		lui_draw_rect(r,rxColor_RGBA_U(8,36,36,255));
+		lui__drawBox(r,lgi_RGBA_U(8,36,36,255));
 		lui__draw_editor(&editor,r);
 #endif
 
     /* todo: this is something that rx should do intrinsically */
 		Sleep(8);
 
-	} while(rxtick());
+	} while(lgi_tick());
 
 	return 0;
 }
@@ -130,12 +130,12 @@ lui_Editor *editor, char const *name)
 
 		if(memory != 0)
 		{
-			EBuffer_uninit(&editor->buffer);
-			EBuffer_initSized(&editor->buffer,name,length);
+			lui_buffer__uninit(&editor->buffer);
+			lui_buffer__initSized(&editor->buffer,name,length);
 
 			memcpy(editor->buffer.string,memory,length);
 
-			EBuffer_reformat(&editor->buffer);
+			lui_buffer__reformat(&editor->buffer);
 		}
 	}
 }
@@ -143,7 +143,7 @@ lui_Editor *editor, char const *name)
 int
 eeditor_unload(lui_Editor *editor, char const *name)
 {
-	int result = rxFalse;
+	int result = lgi_False;
 
   /* todo: this should be safer */
 	if((name != 0) && (strlen(name) != 0))

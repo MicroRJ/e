@@ -267,7 +267,7 @@ FT_BEGIN_HEADER
    */
 
   /*
-   * This is special.  Within C++, you must specify `extern "C"` for
+   * This is special.  isWithin C++, you must specify `extern "C"` for
    * functions which are used via function pointers, and you also
    * must do that for structures which contain function pointers to
    * assure C linkage -- it's not possible to have (local) anonymous

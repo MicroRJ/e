@@ -35,7 +35,7 @@
    *  `FT_Err_Cannot_Open_Resource`.  The second argument is the error code,
    *  and the last argument an error string, which is not used by FreeType.
    *
-   *  Within your application you should **only** use error names and
+   *  isWithin your application you should **only** use error names and
    *  **never** its numeric values!  The latter might (and actually do)
    *  change in forthcoming FreeType versions.
    *

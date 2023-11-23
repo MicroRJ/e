@@ -20,19 +20,28 @@
 */
 
 void
-EBuffer_setName(lui_Buffer *lpBuffer, char const *lpName) {
+lui_buffer__setName(lui_Buffer *lpBuffer, char const *lpName) {
 	strcpy(lpBuffer->name,lpName);
 }
 
 void
-EBuffer_setFileName(lui_Buffer *lpBuffer, char const *lpName) {
+lui_buffer__setFileName(lui_Buffer *lpBuffer, char const *lpName) {
 	strcpy(lpBuffer->fileName,lpName);
 }
 
+void
+lui_buffer__initWithMemory(lui_Buffer *xx, char const *name, char const *file, __int64 length, void *fileContents) {
+	lui_buffer__setName(xx,name);
+	lui_buffer__setFileName(xx,file);
+	xx->length=length;
+	xx->extent=length;
+	xx->memory=fileContents;
+	xx->isReadonly=1;
+}
 
 void
-EBuffer_initSized(lui_Buffer *lpBuffer, char const *tag, __int64 length) {
-	EBuffer_setName(lpBuffer,tag);
+lui_buffer__initSized(lui_Buffer *lpBuffer, char const *tag, __int64 length) {
+	lui_buffer__setName(lpBuffer,tag);
 
 	if(length) {
 
@@ -41,7 +50,7 @@ EBuffer_initSized(lui_Buffer *lpBuffer, char const *tag, __int64 length) {
 }
 
 void
-EBuffer_uninit(lui_Buffer *lpBuffer) {
+lui_buffer__uninit(lui_Buffer *lpBuffer) {
 	lui__freealigned(lpBuffer->string);
 	lui__freealigned(lpBuffer->colors);
 	lpBuffer->length = 0;
@@ -104,7 +113,7 @@ EBuffer_insertSize(lui_Buffer *buffer, __int64 offset, __int64 length) {
 
 /* could this be done automatically #todo */
 void
-EBuffer_reformat(lui_Buffer *buffer) {
+lui_buffer__reformat(lui_Buffer *buffer) {
 
 	char *cursor = buffer->string;
   /* todo */
@@ -132,7 +141,7 @@ EBuffer_reformat(lui_Buffer *buffer) {
 	}
 }
 
-rx_assert(cursor == buffer->string + buffer->length);
+lgi_ensure(cursor == buffer->string + buffer->length);
 }
 
 inline lui_TextLine
@@ -140,7 +149,7 @@ Emu_buffer_get_line_at_index(
 lui_Buffer *buffer, int index)
 {
   /* remove, this should not happen? */
-	if(buffer->lcache == rxNull)
+	if(buffer->lcache == lgi_Null)
 	{
 		lui_TextLine row;
 		row.length = 0;

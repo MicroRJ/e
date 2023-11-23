@@ -24,7 +24,7 @@
 // create a font atlas and that's it ...
 
 /* #todo */
-rxAPI inline void
+lgi_API inline void
 rlMem_copy2d( Emu_memcpy2d_config_t *config )
 {
 	for (int y = 0; y < config->src.height; y += 1)
@@ -57,7 +57,7 @@ rlFont_makeGlyph(lui_GlyphCol *pallet, int index, int utf32
 	glyph.offset_y = offset_y;
 	glyph.walking_x = walking_x;
 
-	lui_FontGlyph *result = EMU_ALLOC_TYPE(lui_FontGlyph);
+	lui_FontGlyph *result = lgi__allocate_typeof(lui_FontGlyph);
 	*result = glyph;
 	return result;
 }
@@ -72,7 +72,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 		lui_GlyphCol *pallet = *pallet_;
 
-		rx_Image storage = pallet->storage;
+		lgi_Bitmap storage = pallet->storage;
 
 		if(storage.size_y < height) {
 			continue;
@@ -127,7 +127,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 		}
 
 		/* maybe sort the array #todo #pending */
-		result = EMU_ALLOC_TYPE(lui_GlyphRow);
+		result = lgi__allocate_typeof(lui_GlyphRow);
 
 		if(result != NULL) {
 
@@ -148,16 +148,16 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 	if(result == NULL)
 	{
-		lui_GlyphCol *pallet = EMU_ALLOC_TYPE(lui_GlyphCol);
+		lui_GlyphCol *pallet = lgi__allocate_typeof(lui_GlyphCol);
 		pallet->buckets = NULL;
 		pallet->texture = NULL;
-		pallet->storage = rx_makeImage(1024,1024,EMU_FORMAT_R8_UNORM);
+		pallet->storage = lgi_allocateTextureContents(1024,1024,lgi_Format_R8_UNORM);
 		pallet->cursor_y = 0;
 
 		*arradd(lui.pallets,1) = pallet;
 
 		/* maybe sort the array #todo #pending */
-		result = EMU_ALLOC_TYPE(lui_GlyphRow);
+		result = lgi__allocate_typeof(lui_GlyphRow);
 		result->pallet = pallet;
 		result->height = height;
 		result->cursor_x = 0;
@@ -167,7 +167,7 @@ rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
 
 		*arradd(pallet->buckets,1) = result;
 
-		rx_assert(result != NULL);
+		lgi_ensure(result != NULL);
 	}
 
 	if(result != NULL) {
@@ -318,7 +318,7 @@ rlFont_readNextLigature(char const *s, int *u) {
 	number of glyphs, when rendering, we add the glyphs to this buffer, and we store the
 	draw quad, when we run out of space we flush the buffer */
 void
-rx_drawText( rxTTF_DRAW *lpConfig ) {
+lgi_drawText( lui_Draw_Config *lpConfig ) {
 	lui_Font *lpFont = lpConfig->lpFont;
 
 	if (lpConfig->char_height == 0.) {
@@ -338,9 +338,9 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 
 	char const *string = lpConfig->string;
 
-	rlColor color = lpConfig->color;
+	lgi_Color color = lpConfig->color;
 
-	rlColor *color_table = lpConfig->color_table;
+	lgi_Color *color_table = lpConfig->color_table;
 
 
 	lui_TextLine single_line;
@@ -351,14 +351,14 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 		lpConfig->line_count = 1;
 	}
 
-	int mode = rxIMP_MODE_2D;
+	int mode = lgi_IM__PRESET_2D;
 	if (lpFont->is_subpixel) {
-		mode = rxIMP_MODE_LCD_TEXT;
+		mode = lgi_IM__PRESET_LCD_TEXT;
 	} else
 	if (lpFont->is_sdf) {
-		mode = rxIMP_MODE_SDF_TEXT;
+		mode = lgi_IM__PRESET_SDF_TEXT;
 	}
-	rxIMP_applyMode(mode,FALSE);
+	lgi_IM__applyPipelinePreset(mode,FALSE);
 
 	lui_TextLine *line_array = lpConfig->line_array;
 	int line_count = lpConfig->line_count;
@@ -409,9 +409,9 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 			if (pallet->dirty) {
 				pallet->dirty = FALSE;
 				if(pallet->texture == NULL) {
-					pallet->texture = rx_uploadimage(pallet->storage);
+					pallet->texture = lgi_uploadTextureContents(pallet->storage);
 				} else {
-					rxGPU_update_texture(pallet->texture,pallet->storage);
+					lgi_Texture__updateContents(pallet->texture,pallet->storage);
 				}
 			}
 
@@ -419,7 +419,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
 				continue;
 			}
 
-			rxIMP_setTexture(rxPIPREG_kPS_TEX_0,pallet->texture,FALSE);
+			lgi_flushAndBindTexture(rxPIPREG_kPS_TEX_0,pallet->texture,FALSE);
 
 			if (color_table != NULL) {
 				color = color_table[colors[it->offset + xchar]];
@@ -483,14 +483,14 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
   void *fileMemory = EMU_load_file_data(filePath,&fileLength);
 
   if IS_NULL(fileMemory) {
-	 rxLOG_error("failed to load file");
+	 lgi_logError("failed to load file");
 	 goto leave;
   }
 
   /* store this for the dynamically adding glyphs and such */
   stbtt_fontinfo fontInfo;
   if(stbtt_InitFont(&fontInfo,fileMemory,0) == 0) {
-	 rxLOG_error("failed to init font");
+	 lgi_logError("failed to init font");
 	 goto leave;
   }
 
@@ -508,7 +508,7 @@ rx_drawText( rxTTF_DRAW *lpConfig ) {
   descentInPixels = descentEm * emToPixels,
   lineGapInPixels = lineGapEm * emToPixels;
   glyphArray = NULL;
-  glyphAtlas = rxGPU_create_texture(atlasWidth,atlasHeight,EMU_FORMAT_R8_UNORM);
+  glyphAtlas = lgi_GPU__createTextureSimply(atlasWidth,atlasHeight,lgi_Format_R8_UNORM);
   atlasMemory = rxGPU_borrow_texture(glyphAtlas);
 
   /* widen the glyphs to prepare for sub-pixel rendering, subsequent renderers

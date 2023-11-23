@@ -35,7 +35,7 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 	lpEditor->cursor_blink_timer = blink_timer;
 
 	/* todo */
-	rlColor curcolor = E_CURSOR_COLOR(lpEditor);
+	lgi_Color curcolor = E_CURSOR_COLOR(lpEditor);
 	curcolor.a = clamp(animation,.1,.8);
 	float lineHeight = lpFont->line_height;
 	/* [[TODO]]: rename to "firstline" */
@@ -63,7 +63,7 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 
 	lui_Buffer buffer = lpEditor->buffer;
 
-	rxTTF_DRAW config;
+	lui_Draw_Config config;
 	ZeroMemory(&config,sizeof(config));
 	config.font = lpFont;
 	config.x = bx.x0;
@@ -71,7 +71,7 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 	config.char_height = lpFont->char_height;
 	config.line_height = lpFont->line_height;
    config.tab_size = 3; /* in spaces */
-	config.color = rxColor_RGBA(1,1,1,.8);
+	config.color = lgi_RGBA(1,1,1,.8);
 	config.color_table = 0;
 	config.length = buffer.length;
 	config.string = buffer.memory;
@@ -83,9 +83,9 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 		config.line_count = arrlen(buffer.lcache);
 	}
 
-	rx_drawText( &config );
+	lgi_drawText( &config );
 
-	return rxFalse;
+	return lgi_False;
 }
 
 
@@ -128,7 +128,7 @@ lui_Editor *editor)
 
 	do
 	{
-		sorted = rxTrue;
+		sorted = lgi_True;
 
 		for(int i=0; i<enumcur(editor)-1; i+=1)
 		{
@@ -140,14 +140,14 @@ lui_Editor *editor)
 			{ esetcur(editor,i+0,c1);
 				esetcur(editor,i+1,c0);
 
-				sorted = rxFalse;
+				sorted = lgi_False;
 			}
 		}
-	} while(sorted != rxTrue);
+	} while(sorted != lgi_True);
 }
 
 int
-eaddcur(lui_Editor *lp, lui_Cursor cur) {
+lui_editor__addCursor(lui_Editor *lp, lui_Cursor cur) {
 	*arradd(lp->cursor,1) = cur;
 	esrtcur(lp);
 	return efndcur(lp,cur.xchar,cur.yline);
@@ -162,7 +162,7 @@ char *
 egetptr(lui_Editor *wdg, int index)
 {
   /* todo: this should point somewhere safer */
-	rxGlobal char p;
+	lgi_Global char p;
 
   p = 0; /* in case it was overwritten */
 
@@ -235,7 +235,7 @@ esetcur(lui_Editor *editor, int index, lui_Cursor cur) {
 }
 
 void
-esetcurx(lui_Editor *editor, int index, int xchar)
+lui_editor__setCursorX(lui_Editor *editor, int index, int xchar)
 {
 	lui_Cursor cur = egetcur(editor,index);
 
@@ -245,7 +245,7 @@ esetcurx(lui_Editor *editor, int index, int xchar)
 }
 
 void
-esetcury(lui_Editor *editor, int index, int yline)
+lui_editor__setCursorY(lui_Editor *editor, int index, int yline)
 {
 	lui_Cursor cur = egetcur(editor,index);
 
@@ -287,7 +287,7 @@ void
 emovcury(
 lui_Editor *editor, int index, int mov)
 {
-	esetcury(editor,index,egetcury(editor,index)+mov);
+	lui_editor__setCursorY(editor,index,egetcury(editor,index)+mov);
 }
 
 void
@@ -327,10 +327,10 @@ Editor_keyOne(lui_Editor *wdg, lui_EditorEvent key) {
 			}
 		} break;
 		case E_kMOVE_LINE_RIGHT: {
-			esetcurx(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
+			lui_editor__setCursorX(wdg,cur,ebuffer_get_line_length(&wdg->buffer,cursor.yline));
 		} break;
 		case E_kMOVE_LINE_LEFT: {
-			esetcurx(wdg,cur,0);
+			lui_editor__setCursorX(wdg,cur,0);
 		} break;
 
 		case E_kDELETE_BACK: {
@@ -358,7 +358,7 @@ Editor_keyOne(lui_Editor *wdg, lui_EditorEvent key) {
 			emovcurx(wdg,cur,dir*num);
 
 			EBuffer_insertSize(&wdg->buffer,off,-num);
-			EBuffer_reformat(&wdg->buffer);
+			lui_buffer__reformat(&wdg->buffer);
 
 		} break;
 		case E_kCHAR: {
@@ -408,7 +408,7 @@ Editor_keyOne(lui_Editor *wdg, lui_EditorEvent key) {
 
         		/* notify of the event and then move the index */
 				eaddchr_(wdg,off,num);
-				EBuffer_reformat(&wdg->buffer);
+				lui_buffer__reformat(&wdg->buffer);
 			}
 
 			emovcurx(wdg,cur,mov);
@@ -434,21 +434,21 @@ Editor_keyOne(lui_Editor *wdg, lui_EditorEvent key) {
 
 			eaddchr_(wdg,cur,num*2);
 			emovcury(wdg,cur,    1);
-			esetcurx(wdg,cur,    0);
+			lui_editor__setCursorX(wdg,cur,    0);
 
-			EBuffer_reformat(&wdg->buffer);
+			lui_buffer__reformat(&wdg->buffer);
 		} break;
 	}
 }
 
 
 void
-Editor_testKeys(lui_Editor *editor) {
+lui_editor__testKeys(lui_Editor *editor) {
 
 	int mod = 0;
 
 	/* [[todo]]: why doesn't rl just use a flag for this */
-	if rx_testCtrlKey() {
+	if lgi_testCtrlKey() {
 		mod |= E_MOD_CTRL_BIT;
 	}
 	if rx_testAltKey() {
@@ -483,9 +483,9 @@ Editor_testKeys(lui_Editor *editor) {
 		}
 #endif
 	} else
-	if(rx_testCtrlKey() && rx_testKey('Z')) {
+	if(lgi_testCtrlKey() && lgi_testKey('Z')) {
 	} else
-	if(rx_testKey(rx_kESCAPE))
+	if(lgi_testKey(rx_kESCAPE))
 	{
     /* todo */
 		dlb_t *dlb = ccdlb(editor->cursor);
@@ -498,16 +498,16 @@ Editor_testKeys(lui_Editor *editor) {
 		editor->lyview += rx_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
 		editor->lyview  = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
-	if(rx_testKey(rx_kHOME))
+	if(lgi_testKey(rx_kHOME))
 	{
 		Editor_handleKey(editor,E_kMOVE_LINE_LEFT,1,0);
 
 	} else
-	if(rx_testKey(rx_kEND))
+	if(lgi_testKey(rx_kEND))
 	{
 		Editor_handleKey(editor,E_kMOVE_LINE_RIGHT,1,0);
 	} else
-	if(rx_testCtrlKey() && rx_testKey('X'))
+	if(lgi_testCtrlKey() && lgi_testKey('X'))
 	{
 		for(int i=enumcur(editor)-1;i>=0;i-=1)
 		{
@@ -520,19 +520,19 @@ Editor_testKeys(lui_Editor *editor) {
 			(ptr[1]=='\n')) num += 1;
 
 			EBuffer_insertSize(&editor->buffer,row.offset,-(row.length+num));
-		EBuffer_reformat(&editor->buffer);
+		lui_buffer__reformat(&editor->buffer);
 	}
 
 } else
-if(rx_testKey(rxKEY_kUP))
+if(lgi_testKey(rxKEY_kUP))
 {
-	if(rx_testCtrlKey() && rx_testAltKey())
+	if(lgi_testCtrlKey() && rx_testAltKey())
 	{
 		lui_Cursor cur = egetcur(editor,0);
 		cur.yline -= 1;
-		eaddcur(editor,cur);
+		lui_editor__addCursor(editor,cur);
 	} else
-	if(rx_testCtrlKey())
+	if(lgi_testCtrlKey())
 	{
       /* scroll up */
 		editor->lyview -= rx_testShiftKey() ? 16 : 1;
@@ -544,15 +544,15 @@ if(rx_testKey(rxKEY_kUP))
 		emovcury(editor,i,-1);
 }
 } else
-if(rx_testKey(rxKEY_kDOWN))
+if(lgi_testKey(rxKEY_kDOWN))
 {
-	if(rx_testCtrlKey() && rx_testAltKey())
+	if(lgi_testCtrlKey() && rx_testAltKey())
 	{
 		lui_Cursor cur = egetcur(editor,enumcur(editor)-1);
 		cur.yline += 1;
-		eaddcur(editor,cur);
+		lui_editor__addCursor(editor,cur);
 	} else
-	if(rx_testCtrlKey())
+	if(lgi_testCtrlKey())
 	{
       /* scroll down */
 		editor->lyview += rx_testShiftKey() ? 16 : 1;
@@ -564,24 +564,24 @@ if(rx_testKey(rxKEY_kDOWN))
 		emovcury(editor,i,+1);
 }
 } else
-if(rx_testKey(rxKEY_kLEFT))
+if(lgi_testKey(rxKEY_kLEFT))
 { Editor_handleKey(editor,E_kMOVE_LEFT,   1,0);
 } else
-if(rx_testKey(rxKEY_kRIGHT))
+if(lgi_testKey(rxKEY_kRIGHT))
 {
 	Editor_handleKey(editor,E_kMOVE_RIGHT, 1,0);
 } else
-if(rx_testKey(rx_kDELETE))
+if(lgi_testKey(rx_kDELETE))
 { Editor_handleKey(editor,E_kDELETE_HERE,1,0);
 } else
-if(rx_testKey(rx_kBCKSPC))
+if(lgi_testKey(rx_kBCKSPC))
 { Editor_handleKey(editor,E_kDELETE_BACK,1,0);
 } else
-if(rx_testKey(rxKEY_kRETURN))
+if(lgi_testKey(rxKEY_kRETURN))
 {
 	Editor_handleKey(editor,E_kLINE,1,0);
 } else
-{ if(!rx_testCtrlKey())
+{ if(!lgi_testCtrlKey())
 	{
 		if(rx_testChar() != 0)
 		{

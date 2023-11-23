@@ -20,13 +20,13 @@
 
 #define TUI_LINE_HEIGHT ((lui.font->line_height*1.2f))
 
-#define ELUI_COLOR_BACKGROUND   rxColor_RGBA_U(11,53,62,255)
-#define ELUI_COLOR_FOREGROUND   rxColor_RGBA_U(9,63,73,255)
-#define ELUI_COLOR_PRIMARY      rxColor_RGBA_U(111,139,149,255)
-#define ELUI_COLOR_SECONDARY 	  rxColor_RGBA_U(111,139,149,255)
-#define ELUI_COLOR_DANGER 		  rxColor_RGBA_U(180+45,60+45,63+45,255)
-#define ELUI_COLOR_HAPPY 		  rxColor_RGBA_U(79,191,138,255)
-#define ELUI_COLOR_ACCENT 		  rxColor_RGBA_U(134,151,38,255)
+#define ELUI_COLOR_BACKGROUND   lgi_RGBA_U(11,53,62,255)
+#define ELUI_COLOR_FOREGROUND   lgi_RGBA_U(9,63,73,255)
+#define ELUI_COLOR_PRIMARY      lgi_RGBA_U(111,139,149,255)
+#define ELUI_COLOR_SECONDARY 	  lgi_RGBA_U(111,139,149,255)
+#define ELUI_COLOR_DANGER 		  lgi_RGBA_U(180+45,60+45,63+45,255)
+#define ELUI_COLOR_HAPPY 		  lgi_RGBA_U(79,191,138,255)
+#define ELUI_COLOR_ACCENT 		  lgi_RGBA_U(134,151,38,255)
 
 #define ELUI_DEFAULT_ROUNDINESS 2.5
 
@@ -38,7 +38,7 @@ typedef signed int 			  __int32;
 
 /* TODO: */
 #ifndef lui__debugassert
-#define lui__debugassert rx_assert
+#define lui__debugassert lgi_ensure
 # endif
 #ifndef lui__reallocaligned
 #define lui__reallocaligned(length,memory) _aligned_realloc(memory,length,16)
@@ -64,17 +64,17 @@ typedef signed int 			  __int32;
 #define E_IS_WORD_DELI(r) (!E_IS_ALPNUM(r))
 # endif
 # ifndef E_CURSOR_PHASE
-# define E_CURSOR_PHASE(E,time_since_last_blink,blinks_per_second) (.5 + .5 * cos(rxPI_F * time_since_last_blink / blinks_per_second));
+# define E_CURSOR_PHASE(E,time_since_last_blink,blinks_per_second) (.5 + .5 * cos(lgi_PI * time_since_last_blink / blinks_per_second));
 #include <math.h>
 #  endif
 #ifndef E_CURSOR_COLOR
 #define E_CURSOR_COLOR(E) E_MK_COLOR_RGBA_UNORM(148,232,148,255)
 # endif
 #ifndef E_COLOR
-#define E_COLOR rlColor
+#define E_COLOR lgi_Color
 # endif
 #ifndef E_MK_COLOR_RGBA_UNORM
-#define E_MK_COLOR_RGBA_UNORM rxColor_RGBA_U
+#define E_MK_COLOR_RGBA_UNORM lgi_RGBA_U
 # endif
 // TODO: REMOVE END
 
@@ -161,8 +161,8 @@ typedef struct lui_GlyphRow {
 } lui_GlyphRow;
 
 typedef struct lui_GlyphCol {
-	rxGPU_Texture *texture;
-	rx_Image storage;
+	lgi_Texture *texture;
+	lgi_Bitmap storage;
 	unsigned dirty: 1;
 	lui_GlyphRow **buckets;
 	short cursor_y;
@@ -208,7 +208,7 @@ typedef struct {
 // [[[TODO REMOVE]]]
 /* is either the font knows about the renderer or the renderer knows about the font
 	or this becomes a separate file #pending */
-typedef struct rxTTF_DRAW {
+typedef struct lui_Draw_Config {
 	union {
 		lui_Font *font;
 		lui_Font *lpFont;
@@ -217,9 +217,9 @@ typedef struct rxTTF_DRAW {
 
 	int tab_size; /* in spaces */
 
-	rlColor color;
+	lgi_Color color;
 
-	rlColor *color_table;
+	lgi_Color *color_table;
 
 	int              length;
 	char const     * string;
@@ -236,7 +236,7 @@ typedef struct rxTTF_DRAW {
 
 	/* optional, not meant for subpixel fonts */
 	float char_height;
-} rxTTF_DRAW;
+} lui_Draw_Config;
 
 
 
@@ -309,22 +309,22 @@ typedef struct {
 struct {
 	lui_Font *font;
 	float textHeight;
-	rlColor textColor;
-	rlColor *colorTable;
+	lgi_Color textColor;
+	lgi_Color *colorTable;
 	unsigned char *charColors;
 	lui_Box boxstack[0x20];
 	lui_Box *box;
 	int boxcount;
 	lui_Font **fonts;
 	lui_GlyphCol **pallets;
-} elGlobal lui;
+} lgi_Global lui;
 
-void EBuffer_setName(lui_Buffer *, char const *);
-void EBuffer_setFileName(lui_Buffer *, char const *);
+void lui_buffer__setName(lui_Buffer *, char const *);
+void lui_buffer__setFileName(lui_Buffer *, char const *);
 /* [[todo]]: alloc and insert could be replaced with a single really nifty function */
 char *EBuffer_allocSize(lui_Buffer *, __int64 reserve, __int64 commit);
 char *EBuffer_insertSize(lui_Buffer *, __int64 offset, __int64 length);
-void EBuffer_initSized(lui_Buffer *, char const *, __int64 length);
+void lui_buffer__initSized(lui_Buffer *, char const *, __int64 length);
 lui_TextLine Emu_buffer_get_line_at_index(lui_Buffer *buffer, int index);
 int ebuffer_get_line_length(lui_Buffer *buffer, int yline);
 int ebuffer_get_line_offset(lui_Buffer *buffer, int yline);
@@ -332,7 +332,7 @@ int ebuffer_get_line_offset(lui_Buffer *buffer, int yline);
 /* [[API]] */
 char *egetptr(lui_Editor *, __int32);
 __int32 enumcur(lui_Editor *);
-__int32 eaddcur(lui_Editor *, lui_Cursor cur);
+__int32 lui_editor__addCursor(lui_Editor *, lui_Cursor cur);
 void esetcur(lui_Editor *, __int32, lui_Cursor cur);
 lui_Cursor egetcur(lui_Editor *, __int32);
 __int32 egetcurx(lui_Editor *, __int32);
@@ -346,7 +346,7 @@ void edelchar(lui_Editor *, __int32 index);
 void eaddline(lui_Editor *, __int32 offset, __int32 number);
 void eremline(lui_Editor *, __int32 offset, __int32 number);
 
-void Editor_testKeys(lui_Editor *);
+void lui_editor__testKeys(lui_Editor *);
 void Editor_keyOne(lui_Editor *, lui_EditorEvent key);
 void Editor_keyAll(lui_Editor *, lui_EditorEvent key);
 
@@ -359,7 +359,7 @@ lui_Font *lui_loadFont(char const *fileName, float height);
 lui_FontGlyph *lui__findOrMakeGlyphByUnicode(lui_Font *lpFont, int utf32);
 
 void
-rx_drawText( rxTTF_DRAW *config );
+lgi_drawText( lui_Draw_Config *config );
 
 
 
@@ -380,7 +380,7 @@ lui_Font *lui_loadFont(char const *fileName, float height) {
 	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
 	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
 
-	lui_Font *font = EMU_ALLOC_TYPE(lui_Font);
+	lui_Font *font = lgi__allocate_typeof(lui_Font);
 
 	font->is_subpixel = TRUE;
 	font->is_sdf = FALSE;
@@ -459,12 +459,12 @@ enumcur(lui_Editor *editor) {
 
 
 void
-lui_draw_rect(lui_Box rect, rlColor color) {
-	Emu_imp_rect(color,rect.x0,rect.y0,(rect.x1-rect.x0),(rect.y1-rect.y0));
+lui__drawBox(lui_Box rect, lgi_Color color) {
+	lgi_drawQuad(color,rect.x0,rect.y0,(rect.x1-rect.x0),(rect.y1-rect.y0));
 }
 
 void
-lui_draw_round_box(lui_Box box, rlColor color, float cornerRadius) {
+lui_draw_round_box(lui_Box box, lgi_Color color, float cornerRadius) {
 	Emu_imp_rect_sdf(
 	/* */rxvec2_xy(
 	/* */box.x0 + (box.x1 - box.x0) * .5f,
@@ -475,14 +475,14 @@ lui_draw_round_box(lui_Box box, rlColor color, float cornerRadius) {
 }
 
 void
-lui_draw_text_line(lui_Box box, char const *string) {
+lui__drawText(lui_Box box, char const *string) {
 
 	int length = 0;
 	while isNeitherOf3(string[length],'\0','\r','\n') {
 		length += 1;
 	}
 
-	rxTTF_DRAW config;
+	lui_Draw_Config config;
 	ZeroMemory(&config,sizeof(config));
 	config.font = lui.font;
 	config.x = box.x0;
@@ -496,7 +496,7 @@ lui_draw_text_line(lui_Box box, char const *string) {
 	config.string = string;
 	config.colors = lui.charColors;
 
-	rx_drawText( &config );
+	lgi_drawText( &config );
 }
 
 #pragma warning(pop)

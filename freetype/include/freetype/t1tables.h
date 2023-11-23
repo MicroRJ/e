@@ -334,7 +334,7 @@ FT_BEGIN_HEADER
    *
    * @description:
    *   A structure used to represent data in a CID top-level dictionary.  In
-   *   most cases, they are part of the font's '/FDArray' array.  Within a
+   *   most cases, they are part of the font's '/FDArray' array.  isWithin a
    *   CID font file, such (internal) subfont dictionaries are enclosed by
    *   '%ADOBeginFontDict' and '%ADOEndFontDict' comments.
    *

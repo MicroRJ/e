@@ -8,9 +8,9 @@
 // little user interface (lui)
 
 void
-lui_draw_text_line(lui_Box box, char const *string);
+lui__drawText(lui_Box box, char const *string);
 void
-lui_draw_round_box(lui_Box box, rlColor color, float cornerRadius);
+lui_draw_round_box(lui_Box box, lgi_Color color, float cornerRadius);
 
 void lui__check_overflow() {
 	lui.boxcount++;
@@ -52,8 +52,8 @@ int lui_unclickbox(lui_Box box) {
 	return IS_CLICK_LEAVE(0) && lui_testinbox(box,rx.wnd.in.mice.xcursor,rx.wnd.in.mice.ycursor);
 }
 
-#define lui_text(xx) lui_draw_text_line(*lui.box,xx)
-#define lui_texf(ff,...) lui_draw_text_line(*lui.box,elCS_tmpFormat(ff,__VA_ARGS__))
+#define lui_text(xx) lui__drawText(*lui.box,xx)
+#define lui_texf(ff,...) lui__drawText(*lui.box,elCS_tmpFormat(ff,__VA_ARGS__))
 
 
 lui_Box
