@@ -53,7 +53,7 @@ int lui_unclickbox(lui_Box box) {
 }
 
 #define lui_text(xx) lui__drawText(*lui.box,xx)
-#define lui_texf(ff,...) lui__drawText(*lui.box,elCS_tmpFormat(ff,__VA_ARGS__))
+#define lui_texf(ff,...) lui__drawText(*lui.box,elStringFormat(ff,__VA_ARGS__))
 
 
 lui_Box
