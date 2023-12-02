@@ -150,7 +150,7 @@ lui_query_state(elPointer key, elBool createWhenNotFound) {
 			result = lastState;
 			result->key = key;
 		} else {
-			elUnreachable();
+			elRoadblock();
 		}
 	}
 
