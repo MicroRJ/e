@@ -7,18 +7,16 @@
 */
 // little user interface (lui)
 
-void
-lui__drawText(lui_Box box, char const *string);
-void
-lui_draw_round_box(lui_Box box, lgi_Color color, float cornerRadius);
+void lui__drawText(lui_Box box, char const *string);
+void lui__drawRoundBox(lui_Box box, lgi_Color color, float cornerRadius);
 
 void lui__check_overflow() {
 	lui.boxcount++;
-	elEnsure(lui.box<lui.boxstack+(sizeof(lui.boxstack)/sizeof(lui.boxstack[0])));
+	EL_ASSERT(lui.box<lui.boxstack+(sizeof(lui.boxstack)/sizeof(lui.boxstack[0])));
 }
 void lui__check_underflow() {
 	lui.boxcount--;
-	elEnsure(lui.box>lui.boxstack);
+	EL_ASSERT(lui.box>lui.boxstack);
 }
 #define lui_inibox() (lui.box = lui.boxstack)
 #define lui_dupbox() (lui__check_overflow(), lui.box[1] = lui.box[0], lui.box += 1)
@@ -34,7 +32,7 @@ void lui_putbox(lui_Box xx) {
 #define lui_cutbox(side,size) lui_putbox(lui_boxcut(lui.box,FUSE(lui_,side),size))
 
 // WHEN COME BACK FIX THIS
-#define lui_has_line() ((lui_getbox().y1-lui_getbox().y0)>=TUI_LINE_HEIGHT)
+#define lui_hasline() ((lui_getbox().y1-lui_getbox().y0)>=TUI_LINE_HEIGHT)
 #define lui_newline() lui_cutbox(top,TUI_LINE_HEIGHT)
 #define lui_endline() lui_popbox()
 
@@ -102,14 +100,11 @@ rect_center(lui_Box parent, lui_Box child) {
 }
 
 lui_Box
-rect_padd(lui_Box rect, float xpadd, float ypadd)
-{
-	return
-	lui_dobox(
-	rect.x0 + (xpadd * .5),
-	rect.y0 + (ypadd * .5),
-	rect.x1 - (xpadd * .5),
-	rect.y1 - (ypadd * .5));
+rect_padd(lui_Box rect, float xpadd, float ypadd) {
+	return lui_dobox(rect.x0 + (xpadd * .5)
+	, rect.y0 + (ypadd * .5)
+	, rect.x1 - (xpadd * .5)
+	, rect.y1 - (ypadd * .5));
 }
 
 
@@ -150,7 +145,7 @@ lui_query_state(elPointer key, elBool createWhenNotFound) {
 			result = lastState;
 			result->key = key;
 		} else {
-			elRoadblock();
+			EL_ROADBLOCK();
 		}
 	}
 

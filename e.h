@@ -2,19 +2,20 @@
 **
 ** Copyright(c) 2023 - Dayan Rodriguez - Dyr
 **
-** -+- e -+-
+** -+- lui -+-
 **
 */
 
 // [ TIMENTE MORTEM, OMNIA TIMEO ]
 
-// See section [[API]]
-
 #ifndef _E_H
 #define _E_H
 
-/* note: '/LIBPATH:<where>' tell the compiler where to find freetype */
+
+// NOTE: If You Are Compiling From The Command Line Use '/LIBPATH:'
+// To Tell The Compiler Where To Find FreeType!
 #pragma comment(lib,"freetype")
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -50,7 +51,10 @@ typedef signed int 			  __int32;
 #define lui_memmove memmove
 # endif
 #ifndef lui_memcopy
-#define lui_memcopy memcopy
+#define lui_memcopy memcpy
+# endif
+#ifndef lui_memset
+#define lui_memset memset
 # endif
 
 // TODO: REMOVE BEGIN
@@ -145,33 +149,36 @@ typedef struct {
 typedef struct lui_GlyphCol lui_GlyphCol;
 
 typedef struct {
-	lui_GlyphCol *pallet;
-	int external_index;
+	// lui_GlyphCol *pallet;
+	union {
+		int external_index;
+		int index;
+	};
 	int utf32;
 	short x0,y0,x1,y1;
 	short offset_x,offset_y;
 	float walking_x;
 } lui_FontGlyph;
 
-// TODO:
-// this is the shittiest packing algorithm ever
-typedef struct lui_GlyphRow {
-	lui_GlyphCol *pallet;
-	short height,cursor_x,cursor_y;
-} lui_GlyphRow;
-
-typedef struct lui_GlyphCol {
-	lgi_Texture *texture;
-	lgi_Bitmap storage;
-	unsigned dirty: 1;
-	lui_GlyphRow **buckets;
-	short cursor_y;
-} lui_GlyphCol;
-
 typedef struct lui_Font {
 	char const *fpath;
 
-	lui_FontGlyph **glyph_table;
+	lgi_Texture *texture;
+	int needs_texture_reupload;
+
+	struct {
+		lgi_Bitmap bitmap;
+		int linebump;
+		int offset_x;
+		int offset_y;
+	} packer;
+
+#if !defined(LUI_GLYPH_TABLE_LENGTH)
+	#define LUI_GLYPH_TABLE_LENGTH 0x100
+#endif
+
+	// TODO:
+	lui_FontGlyph glyph_table[LUI_GLYPH_TABLE_LENGTH];
 
 	float char_height;
 	float line_height;
@@ -307,6 +314,7 @@ typedef struct {
 } lui_Editor;
 
 struct {
+	// The Current Font Enabled!
 	lui_Font *font;
 	float textHeight;
 	lgi_Color textColor;
@@ -351,56 +359,16 @@ void Editor_keyOne(lui_Editor *, lui_EditorEvent key);
 void Editor_keyAll(lui_Editor *, lui_EditorEvent key);
 
 
-/* [[TODO]] */
-#define lui_logError(fmt,...)
+// TODO:!
+#define lui_logError lgi_logError
 
 
 lui_Font *lui_loadFont(char const *fileName, float height);
-lui_FontGlyph *lui__findOrMakeGlyphByUnicode(lui_Font *lpFont, int utf32);
+lui_FontGlyph *lui_getFontGlyphByUnicode(lui_Font *lpFont, int utf32);
 
 void
 lgi_drawText( lui_Draw_Config *config );
 
-
-
-lui_Font *lui_loadFont(char const *fileName, float height) {
-	FT_Library library_ft;
-	if (FT_Init_FreeType(&library_ft)) {
-		lui_logError("failed to init FreeType");
-	}
-	FT_Face face_ft;
-	if (FT_New_Face(library_ft,fileName,0,&face_ft)) {
-		lui_logError("failed to load file path");
-	}
-	if (FT_Set_Pixel_Sizes(face_ft,0,height)) {
-		lui_logError("invalid pixel size");
-	}
-
-	/* 16.16 to 24.6 to ..32.. */
-	float units_to_pixels = face_ft->size->metrics.y_scale / 65536. / 64.;
-	float lineGap = face_ft->height - (face_ft->ascender - face_ft->descender);
-
-	lui_Font *font = lgi__allocate_typeof(lui_Font);
-
-	font->is_subpixel = TRUE;
-	font->is_sdf = FALSE;
-	font->fpath = fileName;
-	font->glyph_table = NULL;
-	font->ascent = face_ft->ascender * units_to_pixels;
-	font->descent = face_ft->descender * units_to_pixels;
-	font->lineGap = lineGap * units_to_pixels;
-	font->line_height = height;
-	font->char_height = height;
-	font->freetype.face = face_ft;
-
-	lui_FontGlyph *underscoreGlyph = lui__findOrMakeGlyphByUnicode(font,'_');
-	lui_FontGlyph *spaceGlyph = lui__findOrMakeGlyphByUnicode(font,' ');
-	if (spaceGlyph == NULL) {
-		spaceGlyph = underscoreGlyph;
-	}
-	font->spaceWidth = spaceGlyph->walking_x;
-	return font;
-}
 
 
 float
@@ -416,7 +384,7 @@ lui_getTextWidth(lui_Font *font, char const *lpStr, int length) {
 				result += spaceW;
 			}
 		} else {
-			lui_FontGlyph *lpGlyph = lui__findOrMakeGlyphByUnicode(font,chr);
+			lui_FontGlyph *lpGlyph = lui_getFontGlyphByUnicode(font,chr);
 			result += lpGlyph->walking_x;
 		}
 	}
@@ -464,7 +432,7 @@ lui__drawBox(lui_Box rect, lgi_Color color) {
 }
 
 void
-lui_draw_round_box(lui_Box box, lgi_Color color, float cornerRadius) {
+lui__drawRoundBox(lui_Box box, lgi_Color color, float cornerRadius) {
 	Emu_imp_rect_sdf(
 	/* */rxvec2_xy(
 	/* */box.x0 + (box.x1 - box.x0) * .5f,

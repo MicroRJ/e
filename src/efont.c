@@ -19,280 +19,171 @@
 **
 */
 
+lui_FontGlyph *lui_getFontGlyphByIndex(lui_Font *font, int glyph_index, int utf32);
 
-// this whole thing is garbage, we need a static allocator, we should then
-// create a font atlas and that's it ...
+lui_FontGlyph *lui_getFontGlyphByUnicode(lui_Font *font, int utf32) {
+	if (utf32 >= 0 && utf32 < LUI_GLYPH_TABLE_LENGTH) {
+		if (font->glyph_table[utf32].utf32 == utf32) {
+			return font->glyph_table + utf32;
+		}
+	}
 
-/* #todo */
-lgi_API inline void
-rlMem_copy2d( Emu_memcpy2d_config_t *config )
-{
-	for (int y = 0; y < config->src.height; y += 1)
-	{
-		memcpy(
-		config->dst.cursor + config->dst.stride * (y + config->dst.offset_y) + config->dst.offset_x,
-		config->src.cursor + config->src.stride * (y + config->src.offset_y) + config->src.offset_x,
+	int index = FT_Get_Char_Index(font->freetype.face,utf32);
+	if (index == 0) {
+		lui_logError("'%i': <%c> glyph not found!",utf32,utf32);
+	}
+	return lui_getFontGlyphByIndex(font,index,utf32);
+}
 
-		config->src.stride );
+
+void lui_genFontTextures(lui_Font *font) {
+	if (font->needs_texture_reupload != FALSE) {
+		if (font->texture != NULL) {
+			lgi_Texture__updateContents(font->texture,font->packer.bitmap);
+		} else {
+			font->texture = lgi_uploadTextureContents(font->packer.bitmap);
+		}
+		font->needs_texture_reupload = FALSE;
 	}
 }
 
-/* trying this out, see if I like it #pending */
-#define each_in(decl_type,decl_name,arr)\
-(decl_type decl_name = arr; decl_name < arrend(arr); decl_name += 1)
+void lui_packFontGlyph(lui_Font *font, int itemwidth, int itemheight, int itemstride, unsigned char *itemmemory, int *outx, int *outy) {
+	//
+	// NOTE: Do Very Advanced Packing Algorithm!
+	//
 
-lui_FontGlyph *
-rlFont_makeGlyph(lui_GlyphCol *pallet, int index, int utf32
-,	short x0, short y0, short x1, short y1, short offset_x, short offset_y, float walking_x)
-{
-	lui_FontGlyph glyph;
-	glyph.pallet = pallet;
-	glyph.external_index = index;
-	glyph.utf32 = utf32;
-	glyph.x0 = x0;
-	glyph.y0 = y0;
-	glyph.x1 = x1;
-	glyph.y1 = y1;
-	glyph.offset_x = offset_x;
-	glyph.offset_y = offset_y;
-	glyph.walking_x = walking_x;
 
-	lui_FontGlyph *result = lgi__allocate_typeof(lui_FontGlyph);
-	*result = glyph;
-	return result;
+	int xcapacity = font->packer.bitmap.size_x;
+	int ycapacity = font->packer.bitmap.size_y;
+
+	if (font->packer.offset_x + itemwidth > xcapacity) {
+		font->packer.offset_x = 0;
+		font->packer.offset_y += font->packer.linebump;
+	}
+
+	if (itemheight > font->packer.linebump) {
+		font->packer.linebump = itemheight;
+	}
+
+	// TODO: If ran out of space allocate new texture!
+	if (font->packer.offset_y + itemheight > ycapacity) {
+		lui_logError("Out Of Memory!");
+	}
+
+	int packx = font->packer.offset_x;
+	int packy = font->packer.offset_y;
+	*outx = packx;
+	*outy = packy;
+
+	font->packer.offset_x += itemwidth;
+
+	int stride = font->packer.bitmap.stride;
+	unsigned char *memory = font->packer.bitmap.memory;
+
+	for (int y = 0; y < itemheight; y += 1) {
+		lui_memcopy(memory + stride * (y + packy) + packx, itemmemory + itemstride * y, itemstride);
+	}
+	font->needs_texture_reupload = TRUE;
 }
 
-lui_GlyphRow *
-rlFont_findOrMakeGlyphBucket(int width, int height, int *x, int *y)
-{
-	lui_GlyphRow *result = NULL;
+lui_FontGlyph *lui_getFontGlyphByIndex(lui_Font *font, int glyph_index, int utf32) {
+	// lui_logError("Get Font Glyph By Index: %i",glyph_index);
+	//
+	// NOTE: Always allocate the glyph, to avoid calling this function again!
+	//
 
-	/* try to find a better pallet based on the glyph's face #todo */
-	for each_in(lui_GlyphCol **, pallet_, lui.pallets) {
-
-		lui_GlyphCol *pallet = *pallet_;
-
-		lgi_Bitmap storage = pallet->storage;
-
-		if(storage.size_y < height) {
-			continue;
-		}
-
-		if(storage.size_x < width) {
-			continue;
-		}
-
-		/* search each bucket in the pallet */
-		for each_in(lui_GlyphRow **, bucket_, pallet->buckets) {
-
-			lui_GlyphRow *bucket = *bucket_;
-
-			if (bucket == NULL) {
-				continue;
-			}
-
-			/* check if the bucket is too small or tall or if it ran
-				out of space */
-			if (bucket->height < height) {
-				continue;
-			}
-			if (bucket->height > height * 1.3) {
-				continue;
-			}
-			if (bucket->cursor_x + width > storage.size_x) {
-				continue;
-			}
-
-			result = bucket;
-			break;
-		}
-
-		/* the bucket was found, exit the loop */
-		if(result != NULL) {
-			break;
-		}
-
-		/* otherwise attempt to add a bucket if there's enough space */
-		int leftover = storage.size_y - pallet->cursor_y;
-
-		if(leftover < height) {
-			continue;
-		}
-
-		/* add some extra space to spice things up if possible */
-		height *= 1.25;
-
-		if (height > leftover) {
-			height = leftover;
-		}
-
-		/* maybe sort the array #todo #pending */
-		result = lgi__allocate_typeof(lui_GlyphRow);
-
-		if(result != NULL) {
-
-			result->pallet = pallet;
-			result->height = height;
-			result->cursor_x = 0;
-			result->cursor_y = pallet->cursor_y;
-
-			*arradd(pallet->buckets,1) = result;
-		}
-
-		pallet->cursor_y += height;
-
-		if(result != NULL) {
-			break;
-		}
-	}
-
-	if(result == NULL)
-	{
-		lui_GlyphCol *pallet = lgi__allocate_typeof(lui_GlyphCol);
-		pallet->buckets = NULL;
-		pallet->texture = NULL;
-		pallet->storage = lgi_allocateTextureContents(1024,1024,lgi_Format_R8_UNORM);
-		pallet->cursor_y = 0;
-
-		*arradd(lui.pallets,1) = pallet;
-
-		/* maybe sort the array #todo #pending */
-		result = lgi__allocate_typeof(lui_GlyphRow);
-		result->pallet = pallet;
-		result->height = height;
-		result->cursor_x = 0;
-		result->cursor_y = 0;
-
-		pallet->cursor_y += height;
-
-		*arradd(pallet->buckets,1) = result;
-
-		lgi_ensure(result != NULL);
-	}
-
-	if(result != NULL) {
-
-		if(x != NULL) {
-			*x = result->cursor_x;
-		}
-
-		if(y != NULL) {
-			*y = result->cursor_y;
-		}
-
-		result->cursor_x += width;
-	}
-
-	return result;
-}
-
-lui_FontGlyph *
-rlFont_makeGlyphFromIndex(lui_Font *lpFont, int glyph_index, int utf32) {
-
-	FT_GlyphSlot glyph = NULL;
-	int glyph_width  = 0;
-	int glyph_height = 0;
-	int glyph_stride = 0;
-	int dest_x = 0;
-	int dest_y = 0;
-	lui_GlyphRow *lpBucket = NULL;
-	lui_GlyphCol *lpPallet = NULL;
-	FT_Face lpFace = lpFont->freetype.face;
+	lui_FontGlyph *glyph = font->glyph_table + utf32;
+	glyph->index = glyph_index;
+	glyph->utf32 = utf32;
 
 	if (glyph_index == 0) {
-		goto L_backdoor;
-	}
-	if (FT_Load_Glyph(lpFace,glyph_index,FT_LOAD_DEFAULT)) {
-		goto L_backdoor;
-	}
-	if (FT_Render_Glyph(lpFace->glyph,FT_RENDER_MODE_LCD)) {
-		goto L_backdoor;
+		goto L_leave;
 	}
 
-	glyph = lpFace->glyph;
 
-	glyph_width = glyph->bitmap.width;
-	glyph_height = glyph->bitmap.rows;
-	glyph_stride = glyph->bitmap.pitch;
-	unsigned char *glyph_memory = glyph->bitmap.buffer;
+	FT_Face ftface = font->freetype.face;
 
+	if (FT_Load_Glyph(ftface,glyph_index,FT_LOAD_DEFAULT)) {
+		goto L_leave;
+	}
+
+	if (FT_Render_Glyph(ftface->glyph,FT_RENDER_MODE_LCD)) {
+		goto L_leave;
+	}
+
+	FT_GlyphSlot ftslot = ftface->glyph;
+
+	int glyph_width = ftslot->bitmap.width;
+	int glyph_height = ftslot->bitmap.rows;
+	int glyph_stride = ftslot->bitmap.pitch;
+	unsigned char *glyph_memory = ftslot->bitmap.buffer;
 
 	if (glyph_memory != NULL) {
-		lpBucket = rlFont_findOrMakeGlyphBucket(glyph_width,glyph_height,&dest_x,&dest_y);
-
-		if (lpBucket != NULL) {
-			lpPallet = lpBucket->pallet;
-
-			lpBucket->cursor_x += glyph_width;
-
-			Emu_memcpy2d_config_t cpy_cfg;
-			cpy_cfg.dst.offset_x = dest_x;
-			cpy_cfg.dst.offset_y = dest_y;
-			cpy_cfg.dst.height   = lpPallet->storage.size_y;
-			cpy_cfg.dst.stride   = lpPallet->storage.stride;
-			cpy_cfg.dst.cursor   = lpPallet->storage.memory;
-
-			cpy_cfg.src.offset_x = 0;
-			cpy_cfg.src.offset_y = 0;
-			cpy_cfg.src.height = glyph_height;
-			cpy_cfg.src.stride = glyph_stride;
-			cpy_cfg.src.cursor = glyph_memory;
-
-			rlMem_copy2d(&cpy_cfg);
-
-			lpPallet->dirty = TRUE;
-		}
+		int x0,y0;
+		lui_packFontGlyph(font,glyph_width,glyph_height,glyph_stride,glyph_memory,&x0,&y0);
+		glyph->x0 = x0;
+		glyph->y0 = y0;
+		glyph->x1 = x0 + glyph_width;
+		glyph->y1 = y0 + glyph_height;
+		glyph->offset_x = ftslot->bitmap_left;
+		glyph->offset_y = ftslot->bitmap_top - glyph_height;
+		glyph->walking_x = ftslot->advance.x / 64;
 	}
 
-	L_backdoor:
-
-	lui_FontGlyph *lpGlyph;
-	if (glyph == NULL) {
-		lpGlyph = rlFont_makeGlyph(lpPallet,glyph_index,utf32,0,0,0,0,0,0,0);
-	} else {
-		lpGlyph = rlFont_makeGlyph(lpPallet,glyph_index,utf32
-		,	dest_x,dest_y,dest_x+glyph_width,dest_y+glyph_height
-		,	glyph->bitmap_left,glyph->bitmap_top-glyph_height
-		, 	glyph->advance.x/64.);
-	}
-
-	*arradd(lpFont->glyph_table,1) = lpGlyph;
-
-	return lpGlyph;
+	L_leave:
+	return glyph;
 }
 
-lui_FontGlyph *
-rlFont_makeGlyphFromName (lui_Font *lpFont, char const *lpName, int utf32) {
 
-	return rlFont_makeGlyphFromIndex(lpFont,FT_Get_Name_Index(lpFont->freetype.face,lpName),utf32);
-}
-
-lui_FontGlyph *
-lui__findOrMakeGlyphByUnicode(lui_Font *lpFont, int utf32) {
-
-	/* [[SPEED]] */
-	for each_in(lui_FontGlyph **, it_, lpFont->glyph_table) {
-		lui_FontGlyph *it = *it_;
-		if (it != NULL) {
-			if (it->utf32 == utf32) {
-				return it;
-			}
-		}
+lui_Font *lui_loadFont(char const *fileName, float height) {
+	FT_Library ftlib;
+	if (FT_Init_FreeType(&ftlib)) {
+		lui_logError("Failed To Initialize FreeType");
+	}
+	FT_Face ftface;
+	if (FT_New_Face(ftlib,fileName,0,&ftface)) {
+		lui_logError("Failed To Load File");
+	}
+	if (FT_Set_Pixel_Sizes(ftface,0,height)) {
+		lui_logError("Invalid Font Height");
 	}
 
-	int index = FT_Get_Char_Index(lpFont->freetype.face,utf32);
-	if (index == 0) {
-		printf("%s[%i] %s(): '%i': <%c> glyph not found\n"
-		, __FILE__,__LINE__,__func__,utf32,utf32);
+	/* 16.16 to 24.6 to ..32.. */
+	float units_to_pixels = ftface->size->metrics.y_scale / 65536. / 64.;
+	float lineGap = ftface->height - (ftface->ascender - ftface->descender);
+
+	lui_Font *font = lgi__allocate_typeof(lui_Font);
+	lgi__clear_typeof(font);
+
+	font->is_subpixel = TRUE;
+	font->is_sdf = FALSE;
+	font->fpath = fileName;
+	font->ascent = ftface->ascender * units_to_pixels;
+	font->descent = ftface->descender * units_to_pixels;
+	font->lineGap = lineGap * units_to_pixels;
+	font->line_height = height;
+	font->char_height = height;
+	font->freetype.face = ftface;
+
+	font->packer.bitmap = lgi_makeBitmap(1024,1024,lgi_Format_R8_UNORM);
+
+	lui_FontGlyph *underscoreGlyph = lui_getFontGlyphByUnicode(font,'_');
+	lui_FontGlyph *spaceGlyph = lui_getFontGlyphByUnicode(font,' ');
+	if (spaceGlyph == NULL) {
+		spaceGlyph = underscoreGlyph;
 	}
-	return rlFont_makeGlyphFromIndex(lpFont,index,utf32);
+	font->spaceWidth = spaceGlyph->walking_x;
+
+	lui_getFontGlyphByUnicode(font,'A');
+
+
+	return font;
 }
 
-float
-rlFont_getKerning(lui_Font *lpFont, int prev, int code) {
+float lgi_getFontKerning(lui_Font *lpFont, int prev, int code) {
 	float result = .0;
 	if (FT_HAS_KERNING(lpFont->freetype.face)) {
-		/* [[TODO]]: you already have the indexes stored */
+		// TODO: Instead Use The Indexes We've Stored Already!
 		FT_Vector kerning2;
 		FT_Get_Kerning(lpFont->freetype.face
 		, FT_Get_Char_Index(lpFont->freetype.face,prev)
@@ -303,23 +194,27 @@ rlFont_getKerning(lui_Font *lpFont, int prev, int code) {
 	return result;
 }
 
-/* god help us, this will have to be auto generated cuz I can't waste my time doing this */
-int
-rlFont_readNextLigature(char const *s, int *u) {
+
+// TODO:
+// I actually had no idea text shaping was so freaking involved,
+// I'll have to take some time aside to do this manually!
+// I just wanted the simple programming ligatures, maybe someone
+// out there has a way to do this!
+int lui_nextFontLigature(char const *s, int *u) {
 	*u = *s;
-	/* todo: this should call the find or make glyph function directly, if the glyph
-		wasn't found, the function should mark the glyph as not found, and we should
-		provide a fallback */
 	return 1;
 }
-
 
 /* I don't want to do things this way, we should have a cache buffer, which holds a maximum
 	number of glyphs, when rendering, we add the glyphs to this buffer, and we store the
 	draw quad, when we run out of space we flush the buffer */
-void
-lgi_drawText( lui_Draw_Config *lpConfig ) {
+void lgi_drawText( lui_Draw_Config *lpConfig ) {
+
+
 	lui_Font *lpFont = lpConfig->lpFont;
+	// TODO: 1 Frame Latency!
+	lui_genFontTextures(lpFont);
+
 
 	if (lpConfig->char_height == 0.) {
 		lpConfig->char_height = lpFont->char_height;
@@ -387,8 +282,8 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 			int xchar = iii;
 
 			int utf32;
-			iii += rlFont_readNextLigature(string+(offset+iii),&utf32);
-			lui_FontGlyph *glyph = lui__findOrMakeGlyphByUnicode(lpFont,utf32);
+			iii += lui_nextFontLigature(string+(offset+iii),&utf32);
+			lui_FontGlyph *glyph = lui_getFontGlyphByUnicode(lpFont,utf32);
 			if (glyph == NULL) {
 				goto L_skip_rendering;
 			}
@@ -399,6 +294,7 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 				goto L_skip_rendering;
 			}
 
+#if 0
 			lui_GlyphCol *pallet = glyph->pallet;
 			if (pallet == NULL) {
 				continue;
@@ -414,12 +310,13 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 					lgi_Texture__updateContents(pallet->texture,pallet->storage);
 				}
 			}
-
 			if (pallet->texture == NULL) {
 				continue;
 			}
+#endif
 
-			lgi_flushAndBindTexture(rxPIPREG_kPS_TEX_0,pallet->texture,FALSE);
+			lgi_Texture *texture = lpFont->texture;
+			lgi_flushAndBindTexture(rxPIPREG_kPS_TEX_0,texture,FALSE);
 
 			if (color_table != NULL) {
 				color = color_table[colors[it->offset + xchar]];
@@ -432,8 +329,8 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 			float x1 = x0 + (glyph->x1 - glyph->x0) * scale * unwiden;
 			float y1 = y0 + (glyph->y1 - glyph->y0) * scale;
 
-			float xnor = 1. / pallet->texture->size_x;
-			float ynor = 1. / pallet->texture->size_y;
+			float xnor = 1. / texture->size_x;
+			float ynor = 1. / texture->size_y;
 
 			Emu_imp_begin(6,4);
 			rx.imp.attr.rgba = color;
@@ -448,7 +345,7 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 			L_skip_rendering:
 
 			if (glyph == NULL || glyph->walking_x == 0.) {
-				glyph = lui__findOrMakeGlyphByUnicode(lpFont,'_');
+				glyph = lui_getFontGlyphByUnicode(lpFont,'_');
 			}
 			float walking_x = glyph->walking_x;
 
@@ -462,145 +359,3 @@ lgi_drawText( lui_Draw_Config *lpConfig ) {
 		y -= line_height;
 	}
 }
-
-#if 0
-  is_subpixel = FALSE;
-  is_sdf = TRUE;
-
-// #define FONT_SDF_PIXEL_DIST_SCALE 32
-// #define FONT_SDF_CHAR_PADDING     8
-// #define FONT_SDF_ON_EDGE_VALUE    128
-#ifndef FONT_SDF_CHAR_PADDING
-#define FONT_SDF_CHAR_PADDING         8
-# endif
-#ifndef FONT_SDF_ON_EDGE_VALUE
-#define FONT_SDF_ON_EDGE_VALUE        128
-# endif
-#ifndef FONT_SDF_PIXEL_DIST_SCALE
-#define FONT_SDF_PIXEL_DIST_SCALE     32
-# endif
-  size_t fileLength;
-  void *fileMemory = EMU_load_file_data(filePath,&fileLength);
-
-  if IS_NULL(fileMemory) {
-	 lgi_logError("failed to load file");
-	 goto leave;
-  }
-
-  /* store this for the dynamically adding glyphs and such */
-  stbtt_fontinfo fontInfo;
-  if(stbtt_InitFont(&fontInfo,fileMemory,0) == 0) {
-	 lgi_logError("failed to init font");
-	 goto leave;
-  }
-
-  float emToPixels = stbtt_ScaleForPixelHeight(&fontInfo,requestedHeight);
-
-  int ascentEm,descentEm,lineGapEm;
-  stbtt_GetFontVMetrics(&fontInfo,&ascentEm,&descentEm,&lineGapEm);
-
-  int atlasWidth  = 1024*2;
-  int atlasHeight = 512;
-
-  fontHeightInPixels = requestedHeight;
-  lineHeightInPixels = (ascentEm - descentEm + lineGapEm) * emToPixels;
-  ascentInPixels =  ascentEm * emToPixels,
-  descentInPixels = descentEm * emToPixels,
-  lineGapInPixels = lineGapEm * emToPixels;
-  glyphArray = NULL;
-  glyphAtlas = lgi_GPU__createTextureSimply(atlasWidth,atlasHeight,lgi_Format_R8_UNORM);
-  atlasMemory = rxGPU_borrow_texture(glyphAtlas);
-
-  /* widen the glyphs to prepare for sub-pixel rendering, subsequent renderers
-	 must take this into account #noteworthy we could also get rid of it by simply
-	 encoding this larger image into a 3/4 component image, it would take the same
-	 space but it would be more friendly #pending */
-  float wideningFactor = 1.;
-  int tallestGlyph = 0;
-
-  /* generate the atlas, should let the user pick the size since it is
-	 used for caching #todo, though you shouldn't worry too much about
-	 the initial size, this changes dynamically anyways, glyphs are baked in and out fifo style */
-
-  int atlasY = 0, atlasX = 0;
-
-  int rune;
-  for ( rune  = glyphStart;
-		  rune  < glyphEnd;    rune += 1 )
-  {
-	 /* we have to add the glyph even if the character is invisible #todo */
-	 lui_FontGlyph *data = arradd(glyphArray,1);
-
-	 int advanceWidthEm = 0;
-	 int leftSideBearingEm = 0;
-	 stbtt_GetCodepointHMetrics(&fontInfo,rune,&advanceWidthEm,&leftSideBearingEm);
-
-	 float walking_x = advanceWidthEm * emToPixels;
-	 float leftSideBearing = leftSideBearingEm * emToPixels;
-
-	 int imageWidth = .5 + walking_x * wideningFactor;
-	 int imageHeight = .5 + requestedHeight;
-	 unsigned char *imageData = NULL;
-	 int offset_x = 0;
-	 int offset_y = 0;
-
-	 /* check for all the other invisible characters too #todo,
-		especially once the user is allowed to specify the range */
-	 if(codepoint != ' ')
-	 {
-		if(0)
-		{
-		  imageData = stbtt_GetGlyphBitmapSubpixel(
-			 &fontInfo,emToPixels * wideningFactor,emToPixels,-.5,-.5,
-				stbtt_FindGlyphIndex(&fontInfo,codepoint),&imageWidth,&imageHeight,&offset_x,&offset_y);
-		} else
-		{
-		  imageData = stbtt_GetGlyphSDF(&fontInfo,emToPixels * wideningFactor,emToPixels,
-			 /* cache this #todo */
-			 stbtt_FindGlyphIndex(&fontInfo,codepoint),
-				FONT_SDF_CHAR_PADDING,FONT_SDF_ON_EDGE_VALUE,FONT_SDF_PIXEL_DIST_SCALE,
-				  &imageWidth,&imageHeight,&offset_x,&offset_y);
-		}
-	 }
-
-	 if(imageHeight > tallestGlyph)
-	 {
-		tallestGlyph = imageHeight;
-	 }
-
-	 if(atlasX + imageWidth > atlasWidth)
-	 {
-		atlasX = 0;
-		atlasY += tallestGlyph; /* #todo */
-	 }
-
-	 data->codepoint = codepoint;
-	 data->x0 = atlasX;
-	 data->y0 = atlasY;
-	 data->x1 = atlasX + imageWidth;
-	 data->y1 = atlasY + imageHeight;
-	 data->codepoint = codepoint;
-	 data->walking_x = walking_x;
-	 data->offset_x = offset_x;
-	 data->offset_y = - offset_y - imageHeight ;
-	 data->imageWidth = imageWidth;
-	 data->imageHeight = imageHeight;
-
-	 if(imageData != NULL)
-	 {
-		for (int imageY = 0; imageY < imageHeight; imageY += 1)
-		{
-		  memcpy(
-			 atlasMemory.cursor +
-			 atlasMemory.stride * (imageY + atlasY) + atlasX,
-			 imageData  +
-			 imageWidth * imageY, imageWidth);
-		}
-
-		atlasX += imageWidth;
-	 }
-  }
-
-leave:
-  font.stb.face = fontInfo;
-#endif
