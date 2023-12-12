@@ -44,14 +44,14 @@ int lui_testinbox(lui_Box box, float x, float y) {
 	return ((x >= box.x0) && (y >= box.y0)) && ((x <  box.x1) && (y <  box.y1));
 }
 int lui_clickbox(lui_Box box) {
-	return IS_CLICK_ENTER(0) && lui_testinbox(box,rx.wnd.in.mice.xcursor,rx.wnd.in.mice.ycursor);
+	return lgi_isButtonPressed(0) && lui_testinbox(box,lgi.Input.Mice.xcursor,lgi.Input.Mice.ycursor);
 }
 int lui_unclickbox(lui_Box box) {
-	return IS_CLICK_LEAVE(0) && lui_testinbox(box,rx.wnd.in.mice.xcursor,rx.wnd.in.mice.ycursor);
+	return lgi_isButtonReleased(0) && lui_testinbox(box,lgi.Input.Mice.xcursor,lgi.Input.Mice.ycursor);
 }
 
 #define lui_text(xx) lui__drawText(*lui.box,xx)
-#define lui_texf(ff,...) lui__drawText(*lui.box,elStringFormat(ff,__VA_ARGS__))
+#define lui_texf(ff,...) lui__drawText(*lui.box,elCS_tmpFormat(ff,__VA_ARGS__))
 
 
 lui_Box

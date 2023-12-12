@@ -12,7 +12,7 @@
 
 #define lgi_DEFAULT_WINDOW_WIDTH 1080 + 256
 #define lgi_DEFAULT_WINDOW_HEIGHT 720
-#define _RX_REFRESH_RATE          30
+#define lgi_REFRESH_RATE          30
 #define _RX_STANDALONE
 #include <rx/rx.c>
 
@@ -88,10 +88,10 @@ int main(int argc, char **argv)
 		if(lgi_testKey(rxKEY_kF9))
 		{
 		} else
-		if(lgi_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && lgi_testKey(rxKEY_kUP))
+		if(lgi_testCtrlKey() && lgi_testAltKey() && lgi_testShiftKey() && lgi_testKey(rxKEY_kUP))
 		{
 		} else
-		if(lgi_testCtrlKey() && rx_testAltKey() && rx_testShiftKey() && lgi_testKey(rxKEY_kDOWN))
+		if(lgi_testCtrlKey() && lgi_testAltKey() && lgi_testShiftKey() && lgi_testKey(rxKEY_kDOWN))
 		{
 		} else
 		if(lgi_testCtrlKey() && lgi_testKey('O')) {
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 		} else
 		{
 		}
-		lui_Box rect = lui_dobox(0,0,rx.wnd.size_x,rx.wnd.size_y);
+		lui_Box rect = lui_dobox(0,0,rx.Window.size_x,rx.Window.size_y);
 		lui_Box r = rlGetWindowClientBox();
 		lui__drawBox(r,lgi_RGBA_U(8,36,36,255));
 		lui__draw_editor(&editor,r);

@@ -39,9 +39,9 @@ lui_FontGlyph *lui_getFontGlyphByUnicode(lui_Font *font, int utf32) {
 void lui_genFontTextures(lui_Font *font) {
 	if (font->needs_texture_reupload != FALSE) {
 		if (font->texture != NULL) {
-			lgi_Texture__updateContents(font->texture,font->packer.bitmap);
+			lgi_updateTexture(font->texture,font->packer.bitmap);
 		} else {
-			font->texture = lgi_uploadTextureContents(font->packer.bitmap);
+			font->texture = lgi_uploadImage(font->packer.bitmap);
 		}
 		font->needs_texture_reupload = FALSE;
 	}
@@ -165,7 +165,7 @@ lui_Font *lui_loadFont(char const *fileName, float height) {
 	font->char_height = height;
 	font->freetype.face = ftface;
 
-	font->packer.bitmap = lgi_makeBitmap(1024,1024,lgi_Format_R8_UNORM);
+	font->packer.bitmap = lgi_makeImage(1024,1024,lgi_Format_R8_UNORM);
 
 	lui_FontGlyph *underscoreGlyph = lui_getFontGlyphByUnicode(font,'_');
 	lui_FontGlyph *spaceGlyph = lui_getFontGlyphByUnicode(font,' ');
@@ -246,14 +246,15 @@ void lgi_drawText( lui_Draw_Config *lpConfig ) {
 		lpConfig->line_count = 1;
 	}
 
-	int mode = lgi_IM__PRESET_2D;
+	//
+	// TODO: Can We Just Attach The Program To The Shader?
+	//
 	if (lpFont->is_subpixel) {
-		mode = lgi_IM__PRESET_LCD_TEXT;
+		lgi_bindProgram(lgi.lcdTextProgram);
 	} else
 	if (lpFont->is_sdf) {
-		mode = lgi_IM__PRESET_SDF_TEXT;
+		lgi_bindProgram(lgi.sdfTextProgram);
 	}
-	lgi_IM__applyPipelinePreset(mode,FALSE);
 
 	lui_TextLine *line_array = lpConfig->line_array;
 	int line_count = lpConfig->line_count;
@@ -305,9 +306,9 @@ void lgi_drawText( lui_Draw_Config *lpConfig ) {
 			if (pallet->dirty) {
 				pallet->dirty = FALSE;
 				if(pallet->texture == NULL) {
-					pallet->texture = lgi_uploadTextureContents(pallet->storage);
+					pallet->texture = lgi_uploadImage(pallet->storage);
 				} else {
-					lgi_Texture__updateContents(pallet->texture,pallet->storage);
+					lgi_updateTexture(pallet->texture,pallet->storage);
 				}
 			}
 			if (pallet->texture == NULL) {
@@ -316,7 +317,7 @@ void lgi_drawText( lui_Draw_Config *lpConfig ) {
 #endif
 
 			lgi_Texture *texture = lpFont->texture;
-			lgi_flushAndBindTexture(rxPIPREG_kPS_TEX_0,texture,FALSE);
+			lgi_bindTexture(0,texture,FALSE);
 
 			if (color_table != NULL) {
 				color = color_table[colors[it->offset + xchar]];
@@ -332,15 +333,15 @@ void lgi_drawText( lui_Draw_Config *lpConfig ) {
 			float xnor = 1. / texture->size_x;
 			float ynor = 1. / texture->size_y;
 
-			Emu_imp_begin(6,4);
-			rx.imp.attr.rgba = color;
-			rxaddnidx(6, 0,1,2, 0,2,3);
-			rxaddnvtx(4,
+			lgi_beginVertexArray(6,4);
+			lgi.State.attr.rgba = color;
+			lgi_addIndicesV(6, 0,1,2, 0,2,3);
+			lgi_addVerticesV(4,
 			rxvtx_xyuv(x0,y0, glyph->x0 * xnor, glyph->y1 * ynor),
 			rxvtx_xyuv(x0,y1, glyph->x0 * xnor, glyph->y0 * ynor),
 			rxvtx_xyuv(x1,y1, glyph->x1 * xnor, glyph->y0 * ynor),
 			rxvtx_xyuv(x1,y0, glyph->x1 * xnor, glyph->y1 * ynor));
-			Emu_imp_end();
+			lgi_endVertexArray();
 
 			L_skip_rendering:
 

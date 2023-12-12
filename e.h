@@ -39,7 +39,7 @@ typedef signed int 			  __int32;
 
 /* TODO: */
 #ifndef lui__debugassert
-#define lui__debugassert lgi_ensure
+#define lui__debugassert lgi_ASSERT
 # endif
 #ifndef lui__reallocaligned
 #define lui__reallocaligned(length,memory) _aligned_realloc(memory,length,16)
@@ -167,7 +167,7 @@ typedef struct lui_Font {
 	int needs_texture_reupload;
 
 	struct {
-		lgi_Bitmap bitmap;
+		lgi_Image bitmap;
 		int linebump;
 		int offset_x;
 		int offset_y;
@@ -433,7 +433,7 @@ lui__drawBox(lui_Box rect, lgi_Color color) {
 
 void
 lui__drawRoundBox(lui_Box box, lgi_Color color, float cornerRadius) {
-	Emu_imp_rect_sdf(
+	lgi_drawBoxSDF(
 	/* */rxvec2_xy(
 	/* */box.x0 + (box.x1 - box.x0) * .5f,
 	/* */box.y0 + (box.y1 - box.y0) * .5f),

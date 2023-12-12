@@ -29,7 +29,7 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 		blink_duration = .250;
 	}
 	float blink_timer = lpEditor->cursor_blink_timer;
-	blink_timer += rx.delta_seconds;
+	blink_timer += rx.Time.delta_seconds;
 	double animation = E_CURSOR_PHASE(lpEditor,blink_timer,blink_duration);
 
 	lpEditor->cursor_blink_timer = blink_timer;
@@ -56,9 +56,9 @@ lui__draw_editor(lui_Editor *lpEditor, lui_Box bx) {
 		float curx = bx.x0 + lui_getTextWidth(lpFont,lineStart,cur.xchar);
 		float curw = spaceW;
 		float curh = lpFont->char_height * 1.2;
-		rxvec2_t currad = rxvec2_xy(curw*.5,curh*.5);
-		rxvec2_t curcen = rxvec2_xy(curx+currad.x,cury+currad.y);
-		Emu_imp_rect_sdf(curcen,currad,curcolor,2.5,1.);
+		Vec2 currad = rxvec2_xy(curw*.5,curh*.5);
+		Vec2 curcen = rxvec2_xy(curx+currad.x,cury+currad.y);
+		lgi_drawBoxSDF(curcen,currad,curcolor,2.5,1.);
 	}
 
 	lui_Buffer buffer = lpEditor->buffer;
@@ -447,21 +447,20 @@ lui_editor__testKeys(lui_Editor *editor) {
 
 	int mod = 0;
 
-	/* [[todo]]: why doesn't rl just use a flag for this */
-	if lgi_testCtrlKey() {
+	if (lgi_testCtrlKey()) {
 		mod |= E_MOD_CTRL_BIT;
 	}
-	if rx_testAltKey() {
+	if (lgi_testAltKey()) {
 		mod |= E_MOD_ALT_BIT;
 	}
-	if rx_testShiftKey() {
+	if (lgi_testShiftKey()) {
 		mod |= E_MOD_SHIFT_BIT;
 	}
 
-	if(IS_CLICK_ENTER(0)) {
+	if(lgi_isButtonPressed(0)) {
 		#if 0
-		int xcursor = + rx.wnd.in.mice.xcursor;
-		int ycursor = - rx.wnd.in.mice.ycursor + rx.wnd.size_y;
+		int xcursor = + lgi.Input.Mice.xcursor;
+		int ycursor = - lgi.Input.Mice.ycursor + rx.Window.size_y;
 
 		int yline = editor->lyview + ycursor / editor->font->line_height;
 
@@ -492,10 +491,10 @@ lui_editor__testKeys(lui_Editor *editor) {
 		dlb->sze_min = 1;
 
 	} else
-	if(rx.wnd.in.mice.yscroll != 0)
+	if(lgi.Input.Mice.yscroll != 0)
 	{
     /* scroll up */
-		editor->lyview += rx_testShiftKey() ? 16 : - rx.wnd.in.mice.yscroll;
+		editor->lyview += lgi_testShiftKey() ? 16 : - lgi.Input.Mice.yscroll;
 		editor->lyview  = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
 	if(lgi_testKey(rx_kHOME))
@@ -526,7 +525,7 @@ lui_editor__testKeys(lui_Editor *editor) {
 } else
 if(lgi_testKey(rxKEY_kUP))
 {
-	if(lgi_testCtrlKey() && rx_testAltKey())
+	if(lgi_testCtrlKey() && lgi_testAltKey())
 	{
 		lui_Cursor cur = egetcur(editor,0);
 		cur.yline -= 1;
@@ -535,7 +534,7 @@ if(lgi_testKey(rxKEY_kUP))
 	if(lgi_testCtrlKey())
 	{
       /* scroll up */
-		editor->lyview -= rx_testShiftKey() ? 16 : 1;
+		editor->lyview -= lgi_testShiftKey() ? 16 : 1;
 		editor->lyview  = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
 	{
@@ -546,7 +545,7 @@ if(lgi_testKey(rxKEY_kUP))
 } else
 if(lgi_testKey(rxKEY_kDOWN))
 {
-	if(lgi_testCtrlKey() && rx_testAltKey())
+	if(lgi_testCtrlKey() && lgi_testAltKey())
 	{
 		lui_Cursor cur = egetcur(editor,enumcur(editor)-1);
 		cur.yline += 1;
@@ -555,7 +554,7 @@ if(lgi_testKey(rxKEY_kDOWN))
 	if(lgi_testCtrlKey())
 	{
       /* scroll down */
-		editor->lyview += rx_testShiftKey() ? 16 : 1;
+		editor->lyview += lgi_testShiftKey() ? 16 : 1;
 		editor->lyview = iclamp(editor->lyview,0,arrlen(editor->buffer.lcache)-1);
 	} else
 	{
@@ -583,9 +582,9 @@ if(lgi_testKey(rxKEY_kRETURN))
 } else
 { if(!lgi_testCtrlKey())
 	{
-		if(rx_testChar() != 0)
+		if(lgi_lastChar() != 0)
 		{
-			Editor_handleKey(editor,E_kCHAR,1,rx_testChar());
+			Editor_handleKey(editor,E_kCHAR,1,lgi_lastChar());
 		}
 	}
 }

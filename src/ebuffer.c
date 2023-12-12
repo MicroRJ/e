@@ -141,7 +141,7 @@ lui_buffer__reformat(lui_Buffer *buffer) {
 	}
 }
 
-lgi_ensure(cursor == buffer->string + buffer->length);
+lgi_ASSERT(cursor == buffer->string + buffer->length);
 }
 
 inline lui_TextLine
